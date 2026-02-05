@@ -7,7 +7,22 @@ The application is designed to be highly available and scalable, ensuring that u
 
 The website is designed with a focus on usability and accessibility, making it easy for users to navigate and find the information they need. The user is presented with panel of currency cards arranged in a mosaic grid layout, each card displays the currency symbol, code, exchange rate against MXN, full currency name, last updated timestamp, and rate date. The design incorporates smooth animations and transitions to enhance the overall user experience.
 
-![Mockup design](./docs/mockup.drawio.png)
+The website offers a visualization of the historic values for the last 10 days per currency and averages for the last 15 days, allowing users to analyze trends over time.
+## API Endpoints
+- Healthcheck `/api/health`
+- Exchange rates retrieval `/api/rates/latest` and `/api/rates/:currencyCode` with optional filters `currencyCode`, `startDate`, `endDate`, `limit`
+- Currencies management `/api/currencies`
+
+## Database Schema
+- `currencies` - Stores currency metadata (code, name, Banxico series ID)
+- `exchange_rates` - Stores historical exchange rate data (`series_id`, `currency_code`, `exchange_rate`, `date`, `updated_at`, `created_at`)
+    - Unique constraint on (series_id, date) to prevent duplicate entries
+    - Indexed for fast queries by currency code and date
+- `sync_logs` - Tracks API synchronization history (`sync_type`, `status`, `records_processed`, `error_message`, `started_at`, `completed_at`)
+
+### Mockup Design
+![Mockup design](./docs/mockup-page-1.drawio.png)
+![Mockup design](./docs/mockup-page-2.drawio.png)
 
 #### Customer Expectations
 In order to define SLI/SLO's we must understand what are the customer expectations from the service, so the following list serves as a ground base to define the SLI/SLO's:
@@ -77,11 +92,41 @@ The Currency Exchange application is built using modern web technologies and fol
 ### Diagram
 ![Architecture Diagram](./docs/architecture.drawio.png)
 
+### Infrastructure
+The entire infrastructure is defined using AWS CloudFormation templates, enabling easy deployment and management of resources, the required resources to support the services are:
+- VPC with public and private subnets across multiple Availability Zones
+    - Internet Gateway for public subnet connectivity
+    - NAT Gateway for private subnet outbound internet access
+- Security Groups to control inbound and outbound traffic
+- IAM Roles and Policies for secure access to AWS services
+- ECS Clusters and Services for hosting the frontend and backend applications
+    - ECS Task Definitions for defining the container specifications
+    - ECS Auto Scaling for dynamic scaling of services
+    - ECS with EC2 for hosting the containers
+- Application Load Balancers for distributing traffic
+    -   The ECS task register to the target groups of the load balancers
+    -   External ELB for Frontend in the public subnets
+    -   Internal ELB for Backend in the private subnets
+- RDS Instance for MySQL database in the private subnets with Multi-AZ deployment
+- Lambda Function for data collection
+    - One Lambda function to pull data from Banxico API and update the database
+    - One Lambda function to initialize the database schema this will run at the creation of the stack, only once.
+    - One Lambda for deleting old data from the database, this will run on a schedule to maintain the database size manageable.
+- EventBridge Rule for scheduling the Lambda function
+- Secrets Manager for storing sensitive information like database credentials
+- cloudwatch for monitoring and logging of the application and infrastructure components.
+    - CloudWatch Alarms for critical metrics to trigger notifications via SNS.
+    - CloudWatch Logs for centralized logging of application and Lambda function logs.
+    - Cloudwatch Dashboards for visualizing key metrics and performance indicators.
+- ECR Repository for storing Docker images of the frontend and backend applications.
 
 ### High Availability and Scalability
 - The application is deployed across multiple Availability Zones (AZs) within the AWS region to ensure high availability.
 - Auto Scaling Groups are configured for the backend and frontend ECS Fargate tasks to automatically adjust capacity based on traffic demand.
 - The MySQL database is set up with Multi-AZ deployment for enhanced availability and failover support.
+
+
+
 
 ### CI/CD
 - Both backend and frontend are containerized using Docker
