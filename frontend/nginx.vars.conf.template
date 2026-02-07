@@ -1,0 +1,4 @@
+upstream backend {
+    server $BACKEND_HOST; # Fallback in case of DNS issues
+    server backend:3000 backup;
+}

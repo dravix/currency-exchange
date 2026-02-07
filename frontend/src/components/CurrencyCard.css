@@ -1,0 +1,156 @@
+.currency-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 16px;
+    padding: 24px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s ease;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 220px;
+    position: relative;
+    overflow: hidden;
+}
+
+.currency-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0) 100%);
+    pointer-events: none;
+}
+
+.currency-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+}
+
+.currency-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    position: relative;
+    z-index: 1;
+}
+
+.currency-symbol {
+    font-size: 48px;
+    font-weight: bold;
+    opacity: 0.9;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.currency-code {
+    font-size: 24px;
+    font-weight: 600;
+    letter-spacing: 1px;
+    opacity: 0.95;
+}
+
+.currency-card-body {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    position: relative;
+    z-index: 1;
+}
+
+.exchange-rate {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+.rate-label {
+    font-size: 18px;
+    opacity: 0.9;
+    font-weight: 500;
+}
+
+.rate-value {
+    font-size: 32px;
+    font-weight: bold;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.currency-name {
+    font-size: 14px;
+    opacity: 0.85;
+    margin-top: 8px;
+}
+
+.currency-card-footer {
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    padding-top: 12px;
+    margin-top: 16px;
+    font-size: 12px;
+    opacity: 0.85;
+    position: relative;
+    z-index: 1;
+}
+
+.update-time {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 4px;
+}
+
+.clock-icon {
+    width: 14px;
+    height: 14px;
+}
+
+.rate-date {
+    opacity: 0.75;
+    font-size: 11px;
+    margin-top: 4px;
+}
+
+/* Different gradient variations for variety */
+.currency-card:nth-child(5n+1) {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.currency-card:nth-child(5n+2) {
+    background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.currency-card:nth-child(5n+3) {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.currency-card:nth-child(5n+4) {
+    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+}
+
+.currency-card:nth-child(5n+5) {
+    background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .currency-card {
+        min-height: 200px;
+        padding: 20px;
+    }
+
+    .currency-symbol {
+        font-size: 36px;
+    }
+
+    .currency-code {
+        font-size: 20px;
+    }
+
+    .rate-value {
+        font-size: 28px;
+    }
+}
