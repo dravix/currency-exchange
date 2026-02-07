@@ -34,7 +34,7 @@ jobs:
         env:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           REPOSITORY: currency-exchange
-          IMAGE_TAG: frontend-v${{ github.ref_name }}
+          IMAGE_TAG: ${{ github.ref_name }}
         run: |
           cd frontend/
           docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
