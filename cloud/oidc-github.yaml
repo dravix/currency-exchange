@@ -1,0 +1,58 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: 'IAM OIDC for GitHub Actions to push to ECR'
+
+Parameters:
+  GitHubOrgName:
+    Type: String
+    Description: Your GitHub organization or username (e.g., my-github-user)
+  GitHubRepoName:
+    Type: String
+    Description: Your GitHub repository name (e.g., my-ecr-project)
+  ECRRepositoryName:
+    Type: String
+    Description: Name of the ECR repository to push images to
+
+Resources:
+  GitHubOidcProvider:
+    Type: AWS::IAM::OIDCProvider
+    Properties:
+      Url: 'https://token.actions.githubusercontent.com'
+      ClientIdList:
+        - 'sts.amazonaws.com'
+      ThumbprintList:
+        # The thumbprint for GitHub's OIDC provider. This value is static.
+        - '6938fd4d98bab03faadb97b34396831e3780aea1'
+
+  GitHubActionsECRRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: GitHubActionsECRRole
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Action: 'sts:AssumeRoleWithWebIdentity'
+            Principal:
+              Federated: !Ref GitHubOidcProvider
+            Condition:
+              StringLike:
+                'token.actions.githubusercontent.com:sub': !Sub 'repo:${GitHubOrgName}/${GitHubRepoName}:*'
+              StringEquals:
+                'token.actions.githubusercontent.com:aud': 'sts.amazonaws.com'
+      Path: /
+      Policies:
+        - PolicyName: AllowPushImagesToECR
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action: 'ecr:GetAuthorizationToken'
+                Resource: '*'
+              - Effect: Allow
+                Action:
+                  - 'ecr:CompleteLayerUpload'
+                  - 'ecr:UploadLayerPart'
+                  - 'ecr:InitiateLayerUpload'
+                  - 'ecr:PutImage'
+                  - 'ecr:BatchCheckLayerAvailability'
+                Resource: !Sub 'arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/${ECRRepositoryName}'

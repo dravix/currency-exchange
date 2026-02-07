@@ -1,0 +1,32 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: Top-level stack template that deploys all the application resources including
+  nested stacks.
+Resources:
+  VPCStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.us-east-2.amazonaws.com/currency-exchange-s3-cfn-templates-869457277268/f7c434b7c5add5665948a3acbe168907.template
+      Parameters:
+        VPCName: CurrencyExchangeVPC
+  RDSStack:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: https://s3.us-east-2.amazonaws.com/currency-exchange-s3-cfn-templates-869457277268/96948a5e93f62fcb3eacddebc1fafdc9.template
+      Parameters:
+        DBName: CurrencyExchangeDB
+        DBUser: admin
+        DBAllocatedStorage: '5'
+        DBInstanceClass: db.t3.small
+        EC2SecurityGroup:
+          Fn::GetAtt:
+          - VPCStack
+          - Outputs.EC2SecurityGroup
+        MultiAZ: 'false'
+        EnableReadReplica: 'true'
+Outputs:
+  NestedStackLambdaArn:
+    Description: ARN of the Lambda function from nested stack
+    Value:
+      Fn::GetAtt:
+      - VPCStack
+      - Outputs.LambdaArn
