@@ -2,9 +2,10 @@ name: Frontend CI
 
 on:
   push:
-    branches:
-      - main
-
+    # branches:
+    #   - main
+    tags:
+      - 'frontend-v*' 
 permissions:
   id-token: write   # This is required for requesting the JWT
   contents: read    # This is required for actions/checkout
@@ -13,7 +14,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     # if: "!contains(github.event.head_commit.message, 'release/frontend')"
-
+    if: ${{ github.ref == 'refs/heads/main' }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -33,7 +34,7 @@ jobs:
         env:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           REPOSITORY: currency-exchange
-          IMAGE_TAG: frontend-${{ github.sha }}
+          IMAGE_TAG: frontend-v${{ github.ref_name }}
         run: |
           cd frontend/
           docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
