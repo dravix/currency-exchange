@@ -1,0 +1,38 @@
+name: Frontend CI
+
+on:
+  release:
+    types: [created]
+
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    if: contains(github.event.release.name, 'frontend') || contains(github.event.release.body, 'frontend')
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@main
+        with:
+          role-to-assume: arn:aws:iam::869457277268:role/GitHubActionsECRRole # Replace with your Account ID
+          aws-region: us-east-1
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+
+      - name: Build, tag, and push docker image to Amazon ECR
+        with:
+          region: us-east-1
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          REPOSITORY: frontend
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          cd frontend/
+          docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
+          docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
