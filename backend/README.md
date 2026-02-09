@@ -31,6 +31,7 @@ backend/
 │   │   └── database.js        # Database connection pool
 │   ├── controllers/
 │   │   ├── currencyController.js
+│   │   ├── databaseController.js  # NEW: Database management
 │   │   ├── exchangeRateController.js
 │   │   └── healthController.js
 │   ├── models/
@@ -40,10 +41,12 @@ backend/
 │   ├── routes/
 │   │   ├── index.js
 │   │   ├── currencies.js
+│   │   ├── database.js        # NEW: Database routes
 │   │   ├── exchangeRates.js
 │   │   └── health.js
 │   ├── services/
 │   │   ├── banxicoService.js  # Banxico API integration
+│   │   ├── databaseService.js # NEW: Database operations
 │   │   └── syncService.js     # Data synchronization
 │   ├── app.js                 # Express app configuration
 │   └── server.js              # Server entry point
@@ -128,6 +131,12 @@ The server will start on `http://localhost:3000` (or your configured PORT).
 - **GET** `/api/health` - Health check (database + Banxico API status)
 - **GET** `/api/health/sync-history` - Get synchronization history
 
+### Database Management
+
+- **GET** `/api/database/status` - Check database initialization status
+- **POST** `/api/database/initialize` - Initialize database with schema.sql
+- **POST** `/api/database/reset` - Reset database (⚠️ deletes all data)
+
 ### Currencies
 
 - **GET** `/api/currencies` - Get all active currencies
@@ -144,6 +153,20 @@ The server will start on `http://localhost:3000` (or your configured PORT).
   - Body: `{ "startDate": "2024-01-01", "endDate": "2024-12-31" }`
 
 ## Example API Calls
+
+### Initialize Database
+```bash
+# Check database status
+curl http://localhost:3000/api/database/status
+
+# Initialize database (run schema.sql)
+curl -X POST http://localhost:3000/api/database/initialize
+
+# Reset database (⚠️ WARNING: Deletes all data)
+curl -X POST http://localhost:3000/api/database/reset \
+  -H "Content-Type: application/json" \
+  -d '{"confirm": "YES_DELETE_ALL_DATA"}'
+```
 
 ### Get latest exchange rates
 ```bash
