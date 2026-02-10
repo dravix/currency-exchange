@@ -100,7 +100,7 @@ class ExchangeRate {
             for (const data of dataArray) {
                 const query = `
           INSERT INTO exchange_rates (series_id, currency_code, exchange_rate, date)
-          VALUES (?, ?, ?, ?)
+          VALUES (?, ?, ?, STR_TO_DATE(?, '%d/%m/%Y'))
           ON DUPLICATE KEY UPDATE
             exchange_rate = VALUES(exchange_rate),
             updated_at = CURRENT_TIMESTAMP

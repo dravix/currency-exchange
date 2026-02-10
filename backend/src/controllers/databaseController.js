@@ -85,8 +85,29 @@ const resetDatabase = async (req, res) => {
     }
 };
 
+const syncFromAPI = async (req, res) => {
+    try {
+        const { startDate, endDate } = req.body;
+
+        const result = await databaseService.syncFromAPI(startDate, endDate);
+
+        res.status(200).json({
+            success: true,
+            message: result.message,
+            recordsProcessed: result.recordsProcessed
+        });
+    } catch (error) {
+        console.error('Failed to sync from API:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Failed to sync from API',
+            error: error.error || error.message
+        });
+    }
+};
 module.exports = {
     initializeDatabase,
     getDatabaseStatus,
+    syncFromAPI,
     resetDatabase
 };

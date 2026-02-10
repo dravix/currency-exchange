@@ -19,7 +19,7 @@ class BanxicoService {
         try {
             // Build URL path
             let url = `${this.baseURL}/${seriesIds}/datos`;
-
+            console.log('Fetching data from Banxico API with URL:', url);
             // Add date range if provided
             if (startDate && endDate) {
                 url += `/${startDate}/${endDate}`;

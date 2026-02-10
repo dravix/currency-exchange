@@ -24,4 +24,6 @@ router.post('/initialize', databaseController.initializeDatabase);
  */
 router.post('/reset', databaseController.resetDatabase);
 
+
+router.post('/sync', databaseController.syncFromAPI);
 module.exports = router;

@@ -8,7 +8,7 @@ class SyncLog {
         INSERT INTO sync_logs (sync_type, status, records_processed, error_message, started_at)
         VALUES (?, ?, ?, ?, NOW())
       `;
-
+            console.log('Creating sync log with data:', data);
             const [result] = await pool.execute(query, [
                 data.sync_type,
                 data.status,

@@ -1,6 +1,7 @@
 const fs = require('fs').promises;
 const path = require('path');
-const { pool } = require('../config/database');
+const syncService = require('./syncService');
+const { pool, config } = require('../config/database');
 
 /**
  * Initialize the database by executing schema.sql
@@ -8,12 +9,15 @@ const { pool } = require('../config/database');
  */
 const initializeDatabase = async () => {
     const connection = await pool.getConnection();
-
+    const dbname = connection.config.database;
     try {
         // Read the schema.sql file
         const schemaPath = path.join(__dirname, '../', 'db', 'schema.sql');
         const schemaSql = await fs.readFile(schemaPath, 'utf8');
 
+        // Create database if it doesn't exist
+        await connection.query(`CREATE DATABASE IF NOT EXISTS \`${dbname}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`);
+        await connection.query(`USE \`${dbname}\``);
         // Split into individual statements
         const statements = schemaSql
             .split(';')
@@ -153,8 +157,28 @@ const resetDatabase = async () => {
     }
 };
 
+const syncFromAPI = async () => {
+    try {
+        const result = await syncService.syncExchangeRates();
+
+        return {
+            success: true,
+            message: result.message,
+            recordsProcessed: result.recordsProcessed
+        };
+    } catch (error) {
+        console.error('Failed to sync from API:', error);
+        throw {
+            success: false,
+            message: 'Failed to sync from API',
+            error: error.message
+        };
+    }
+};
+
 module.exports = {
     initializeDatabase,
     checkDatabaseStatus,
-    resetDatabase
+    resetDatabase,
+    syncFromAPI
 };

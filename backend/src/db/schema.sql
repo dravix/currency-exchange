@@ -1,9 +1,7 @@
 -- Currency Exchange Database Schema
 
 -- Create database if not exists
-CREATE DATABASE IF NOT EXISTS currency_exchange CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
-USE currency_exchange;
 
 -- Table for storing currency exchange rates
 CREATE TABLE IF NOT EXISTS exchange_rates (
@@ -24,7 +22,7 @@ CREATE TABLE IF NOT EXISTS exchange_rates (
 CREATE TABLE IF NOT EXISTS sync_logs (
     id INT AUTO_INCREMENT PRIMARY KEY,
     sync_type VARCHAR(50) NOT NULL,
-    status ENUM('success', 'failed', 'partial') NOT NULL,
+    status ENUM('success', 'failed', 'partial', 'running') NOT NULL,
     records_processed INT DEFAULT 0,
     error_message TEXT,
     started_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
