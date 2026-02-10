@@ -47,6 +47,7 @@ Resources:
                   - 'ecr:CompleteLayerUpload'
                   - 'ecr:UploadLayerPart'
                   - 'ecr:InitiateLayerUpload'
+                  - 'ecr:InitiateLayerUpload'
                   - 'ecr:PutImage'
                   - 'ecr:BatchCheckLayerAvailability'
                 Resource: !Sub 'arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/currency-exchange'
@@ -58,6 +59,8 @@ Outputs:
     Value: !GetAtt ECRRepository.RepositoryUri
     Export:
       Name: !Sub '${AWS::StackName}-ECRRepositoryUri' 
+
+  
 
 
   GitHubActionsECRRoleArn:

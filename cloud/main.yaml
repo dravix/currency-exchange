@@ -1,27 +1,118 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: Top-level stack template that deploys all the application resources including nested stacks.
-Resources:
-  VPCStack:
-    Type: AWS::CloudFormation::Stack
-    Properties:
-      TemplateURL: ./vpc.yaml
-      Parameters:
-        VPCName: CurrencyExchangeVPC
 
-  RDSStack:
-    Type: AWS::CloudFormation::Stack
+Parameters:
+  BanxicoApiToken:
+    Description: Banxico API Token for Currency Exchange application
+    Type: String
+    NoEcho: true
+
+  Namespace:
+    Description: Namespace for the application, used for resource naming and tagging
+    Type: String
+    Default: ce-dev
+
+Resources:
+
+  BanxicoApiKeySecret:
+    Type: 'AWS::SecretsManager::Secret'
     Properties:
-      TemplateURL: ./rds.yaml
+      Description: 'Banxico API Token for Currency Exchange application'
+      Name: 'BANXICO_API_TOKEN'
+      SecretString: !Ref BanxicoApiToken
+      
+
+
+  # VPCStack:
+  #   Type: AWS::CloudFormation::Stack
+  #   Properties:
+  #     TemplateURL: ./ecs_cluster.yaml
+  #     Parameters:
+  #       Namespace: !Ref Namespace
+
+  # RDSStack:
+  #   Type: AWS::CloudFormation::Stack
+  #   Properties:
+  #     TemplateURL: ./rds.yaml
+  #     Parameters:
+  #       DBName: CurrencyExchangeDB
+  #       DBUser: admin
+  #       DBAllocatedStorage: "5"
+  #       DBInstanceClass: db.t3.small
+  #       EC2SecurityGroup: !GetAtt VPCStack.Outputs.PrivateLoadBalancerSecurityGroup
+  #       MultiAZ: "false"
+  #       EnableReadReplica: "false"
+
+  # ECRRepositoryStack:
+  #   Type: AWS::CloudFormation::Stack
+  #   Properties:
+  #     TemplateURL: ./ecr.yaml
+
+  ECSFrontendStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: 
+      - VPCStack
+    Properties:
+      TemplateURL: ./ecs_service.yaml
       Parameters:
-        DBName: CurrencyExchangeDB
-        DBUser: admin
-        DBAllocatedStorage: "5"
-        DBInstanceClass: db.t3.small
-        EC2SecurityGroup: !GetAtt VPCStack.Outputs.EC2SecurityGroup
-        MultiAZ: "false"
-        EnableReadReplica: "true"
+        Namespace: !Ref Namespace
+        ServiceName: FrontendService
+        # ImageUrl: !Sub '${ECRRepositoryStack.Outputs.ECRRepositoryUri}/currency-exchange:frontend-v0.1.2'
+        ImageUrl: '869457277268.dkr.ecr.us-east-1.amazonaws.com/currency-exchange:frontend-v0.1.2'
+        ContainerPort: 80
+        ContainerCpu: '256'
+        ContainerMemory: '512'
         
-Outputs:
-  NestedStackLambdaArn:
-    Description: ARN of the Lambda function from nested stack
-    Value: !GetAtt VPCStack.Outputs.LambdaArn
+        Environment:
+          - Name: DB_HOST
+            Value: 'currency-exchange-infra-rdsstack-1bzxxoiy15-maindb-af53ofacnqdy.ck18kwcwcgb8.us-east-1.rds.amazonaws.com'
+            # Value: !Sub '${RDSStack}-DBEndpoint'
+          - Name: BACKEND_HOST
+            Value: !Sub '${VPCStack.Outputs.InternalVip}'
+            # Value: !ImportValue
+            #   Fn::Join:
+            #     - ':'
+            #     - - !Ref Namespace
+            #       - InternalVip
+          
+  ECSBackendStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: 
+      - VPCStack
+      # - RDSStack
+    Properties:
+      TemplateURL: ./ecs_service.yaml
+      Parameters:
+        Namespace: !Ref Namespace
+        ServiceName: BackendService
+        # RDSStackName: !Ref RDSStack
+       # ImageUrl: !Sub '${ECRRepositoryStack.Outputs.ECRRepositoryUri}/currency-exchange:backend-v0.1.2'
+       # ImageUrl: !Sub '${ECRRepositoryStack.Outputs.ECRRepositoryUri}/currency-exchange:backend-v0.1.2'
+        ImageUrl: '869457277268.dkr.ecr.us-east-1.amazonaws.com/currency-exchange:backend-v0.1.0'
+        ContainerPort: 3000
+        ContainerCpu: '256'
+        ContainerMemory: '512'
+        Environment:
+          - Name: DB_HOST
+            Value: 'currency-exchange-infra-rdsstack-1bzxxoiy15-maindb-af53ofacnqdy.ck18kwcwcgb8.us-east-1.rds.amazonaws.com'
+            # Value: !Sub '${RDSStack}-DBEndpoint'
+          - Name: DB_USER
+            Value: 'admin'
+          - Name: DB_PASSWORD
+            Value: 'EC3cOtDNOJhezcBCL2BN'  # Reference the secret from RDS stack
+            # Value: !Sub '{{resolve:secretsmanager:${RDSStack}-DBCredential:SecretString:password}}'  # Reference the secret from RDS stack
+          - Name: DB_NAME
+            Value: 'CurrencyExchangeDB'
+            # Value: !Sub '${RDSStack}-DBName'
+          - Name: PORT
+            Value: '3000'
+          - Name: DB_PORT
+            Value: '3306'
+          - Name: BANXICO_API_TOKEN
+            Value:  '6f28a64d52d3adf0acc05bb1b741fc2ab7c776d761863b281169de233822d5da'  # Reference the Banxico API token secret
+            # Value: !Sub '{{resolve:secretsmanager:${BanxicoApiKeySecret}:SecretString}}'  # Reference the Banxico API token secret
+
+# Outputs:
+  # NestedStackLambdaArn:
+  #   Description: ARN of the Lambda function from nested stack
+  #   Value: !GetAtt VPCStack.Outputs.LambdaArn

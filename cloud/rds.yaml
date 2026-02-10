@@ -6,10 +6,16 @@ Metadata:
   License: Apache-2.0
 
 Parameters:
+
+  Namespace:
+    Description: Namespace for the application, used for resource naming and tagging
+    Type: String
+    Default: ce-dev
+
   DBName:
     Description: The database name
     Type: String
-    Default: MyDatabase
+    Default: CurrencyExchangeDB
     MinLength: "1"
     MaxLength: "64"
     AllowedPattern: '[a-zA-Z][a-zA-Z0-9]*'
@@ -35,13 +41,13 @@ Parameters:
   DBInstanceClass:
     Description: The database instance type
     Type: String
-    Default: db.t3.medium
+    Default: db.t3.small
     ConstraintDescription: must select a valid database instance type.
 
-  EC2SecurityGroup:
-    Description: The EC2 security group that contains instances that need access to the database
+  ECSSecurityGroup:
+    Description: The ECS security group of the ECS tasks that need access to the database
     Type: String
-    Default: default
+    Default: Default
     AllowedPattern: '[a-zA-Z0-9\-]+'
     ConstraintDescription: must be a valid security group name.
 
@@ -64,37 +70,50 @@ Parameters:
     ConstraintDescription: must be true or false.
 
 Conditions:
-  IsEC2VPC: !Or
-    - !Equals
-      - !Ref AWS::Region
-      - eu-central-1
-    - !Equals
-      - !Ref AWS::Region
-      - cn-north-1
 
   EnableReadReplica: !Equals
     - !Ref EnableReadReplica
     - "true"
 
 Resources:
-  DBEC2SecurityGroup:
+
+
+  DBECSSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupDescription: Open database for access
-      SecurityGroupIngress:
-        - IpProtocol: tcp
-          FromPort: "3306"
-          ToPort: "3306"
-          SourceSecurityGroupName: !Ref EC2SecurityGroup
-    Condition: IsEC2VPC
+      VpcId: 
+        Fn::ImportValue: !Sub '${Namespace}:VPCId'  
+
+  DBECSSecurityGroupIngress:
+    Type: AWS::EC2::SecurityGroupIngress
+    Properties:
+      GroupId: !Ref DBECSSecurityGroup
+      IpProtocol: tcp
+      FromPort: "3306"
+      ToPort: "3306"
+      SourceSecurityGroupId: !Ref ECSSecurityGroup
 
   DBCredential:
     Type: AWS::SecretsManager::Secret
     Properties:
+      Name: !Sub '${AWS::StackName}-DBCredential'
       GenerateSecretString:
         PasswordLength: 16
         ExcludeCharacters: '"@/\'
         RequireEachIncludedType: true
+
+
+  DBSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Subnet group for RDS DBInstance
+      DBSubnetGroupName: !Sub '${AWS::StackName}-DBSubnetGroup'
+      SubnetIds:
+        - Fn::ImportValue: !Sub '${Namespace}:PrivateSubnetOne'
+        - Fn::ImportValue: !Sub '${Namespace}:PrivateSubnetTwo'
+
+
 
   MainDB:
     DeletionPolicy: Snapshot
@@ -112,13 +131,12 @@ Resources:
       MultiAZ: !Ref MultiAZ
       PubliclyAccessible: false
       StorageEncrypted: true
+      DBSubnetGroupName: !Ref DBSubnetGroup
       Tags:
         - Key: Name
           Value: Master Database
-      VPCSecurityGroups: !If
-        - IsEC2VPC
-        - - !GetAtt DBEC2SecurityGroup.GroupId
-        - !Ref AWS::NoValue
+      VPCSecurityGroups:
+        - !GetAtt DBECSSecurityGroup.GroupId
 
   ReplicaDB:
     DeletionPolicy: Retain
@@ -139,16 +157,30 @@ Resources:
     Condition: EnableReadReplica
 
 Outputs:
-  DBCredentialSecretNameArn:
+
+  DBEndpoint:
+    Description: Endpoint address of the master database
+    Value: !GetAtt MainDB.Endpoint.Address
+    Export:
+      Name: !Sub '${Namespace}:DBEndpoint'
+
+  DBUsername:
+    Description: The database admin account username
+    Value: !Ref DBUser
+    Export:
+      Name: !Sub '${Namespace}:DBUsername'
+
+  DBCredential:
     Description: Name of the secret containing the database credential
     Value: !Ref DBCredential
-
-  EC2Platform:
-    Description: Platform in which this stack is deployed
-    Value: !If
-      - IsEC2VPC
-      - "true"
-      - EC2VPC
+    Export: 
+      Name: !Sub '${Namespace}:DBCredential'
+      
+  DBName:
+    Description: The database name
+    Value: !Ref DBName
+    Export:
+      Name: !Sub '${Namespace}:DBName'
 
   ConnectionString:
     Description: JDBC connection string for the master database

@@ -1,0 +1,60 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: AWS CloudFormation template for ECS setup of Currency Exchange application
+
+Parameters:
+  VPCStackName:
+    Description: Name of the VPC CloudFormation stack to import resources from
+    Type: String
+
+  RDSStackName:
+    Description: Name of the RDS CloudFormation stack to import resources from
+    Type: String
+
+  ECRRepositoryStackName:
+    Description: Name of the ECR CloudFormation stack to import resources from
+    Type: String
+
+Resources:
+  ECSCluster:
+    Type: AWS::ECS::Cluster
+    Properties:
+      ClusterName: !Sub '${AWS::StackName}-ECS-Cluster'
+
+  FrontendECSService:
+    Type: AWS::ECS::Service
+    Properties:
+      Cluster: !Ref ECSCluster
+      DesiredCount: 2
+      LaunchType: FARGATE
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          Subnets:
+            - Fn::ImportValue: !Sub '${VPCStackName}-PublicSubnet0'
+            - Fn::ImportValue: !Sub '${VPCStackName}-PublicSubnet1'
+          SecurityGroups:
+            - Fn::ImportValue: !Sub '${VPCStackName}-DefaultSecurityGroup'
+      TaskDefinition: !Ref ECSTaskDefinition
+
+  ECSTaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Sub '${AWS::StackName}-ECS-Task'
+      Cpu: '256'
+      Memory: '512'
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      ContainerDefinitions:
+        - Name: currency-exchange-container
+          Image: !Sub '${ECRRepositoryStackName}-RepositoryUri/currency-exchange:frontend-v0.1.2'
+          PortMappings:
+            - ContainerPort: 80
+          Environment:
+            - Name: DB_HOST
+              Value: 
+                Fn::ImportValue: !Sub '${RDSStackName}-DBEndpoint'
+            - Name: DB_USER
+              Value: admin
+            - Name: DB_PASSWORD
+              Value: your-db-password  # Replace with your DB password

@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+import boto3
 
 import mysql.connector
 
@@ -14,6 +15,11 @@ DB_CONFIG = {
 
 def run_migration():
     """Execute schema.sql to initialize the database"""
+    """Execute schema.sql from S3 to initialize the database"""
+    
+    s3 = boto3.client('s3')
+    bucket_name = os.getenv("SCHEMA_BUCKET", "currency-exchange-schemas")
+    schema_key = os.getenv("SCHEMA_KEY", "schema.sql")
     try:
         # Connect to MySQL server (without specifying database first)
         conn = mysql.connector.connect(
