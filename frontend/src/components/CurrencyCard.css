@@ -114,6 +114,41 @@
     margin-top: 4px;
 }
 
+.view-history-btn {
+    width: 100%;
+    margin-top: 16px;
+    padding: 12px;
+    background: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    border-radius: 8px;
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    position: relative;
+    z-index: 1;
+}
+
+.view-history-btn:hover {
+    background: rgba(255, 255, 255, 0.3);
+    border-color: rgba(255, 255, 255, 0.5);
+    transform: translateY(-2px);
+}
+
+.view-history-btn:active {
+    transform: translateY(0);
+}
+
+.chart-icon {
+    width: 18px;
+    height: 18px;
+}
+
 /* Different gradient variations for variety */
 .currency-card:nth-child(5n+1) {
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);

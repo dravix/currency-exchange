@@ -32,7 +32,9 @@ frontend/
 │   │   ├── CurrencyCard.js  # Individual currency card
 │   │   ├── CurrencyCard.css
 │   │   ├── CurrencyGrid.js  # Grid layout container
-│   │   └── CurrencyGrid.css
+│   │   ├── CurrencyGrid.css
+│   │   ├── HistoricalChart.js  # NEW: Historical chart view
+│   │   └── HistoricalChart.css
 │   ├── services/
 │   │   └── api.js           # API service layer
 │   ├── App.js               # Main application component
@@ -112,6 +114,26 @@ Each currency is displayed in a colorful gradient card showing:
 - **Currency Name** - Full name of the currency
 - **Last Updated** - When the rate was last modified
 - **Rate Date** - The date of the exchange rate data
+- **View History Button** - Click to see historical chart
+
+### Historical Charts (NEW!)
+
+Click the "View History" button on any currency card to:
+- **View Interactive Chart** - See exchange rate trends over time
+- **Select Time Range** - Choose from 7 days, 30 days, 90 days, 6 months, 1 year
+- **Custom Range** - Enter any number of days (1-730)
+- **View Statistics** - See latest, highest, and lowest rates
+- **Analyze Trends** - Hover over chart for exact values
+
+**Time Range Options:**
+- 7 Days - Last week's data
+- 30 Days - Last month's data  
+- 90 Days - Last quarter's data
+- 6 Months - Half-year trends
+- 1 Year - Annual overview
+- Custom - Any number of days
+
+See [Historical Chart Feature Documentation](../docs/HISTORICAL_CHART_FEATURE.md) for detailed information.
 
 ### Auto-refresh
 
@@ -143,6 +165,8 @@ The app connects to your backend API at the configured URL:
 ### Endpoints Used
 
 - `GET /api/rates/latest` - Fetches latest exchange rates
+- `GET /api/rates/:currencyCode` - Fetches historical data for a currency
+  - Query params: `startDate`, `endDate`
 
 ### Expected Response Format
 

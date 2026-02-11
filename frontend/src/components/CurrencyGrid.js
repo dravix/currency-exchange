@@ -2,7 +2,7 @@ import React from 'react';
 import CurrencyCard from './CurrencyCard';
 import './CurrencyGrid.css';
 
-const CurrencyGrid = ({ rates, loading, error }) => {
+const CurrencyGrid = ({ rates, loading, error, onViewHistory }) => {
     if (loading) {
         return (
             <div className="loading-container">
@@ -35,7 +35,11 @@ const CurrencyGrid = ({ rates, loading, error }) => {
     return (
         <div className="currency-grid">
             {rates.map((rate) => (
-                <CurrencyCard key={rate.id} rate={rate} />
+                <CurrencyCard 
+                    key={rate.id} 
+                    rate={rate} 
+                    onViewHistory={onViewHistory}
+                />
             ))}
         </div>
     );

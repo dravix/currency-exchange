@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import Header from './components/Header';
 import CurrencyGrid from './components/CurrencyGrid';
+import HistoricalChart from './components/HistoricalChart';
 import { ratesService } from './services/api';
 import './App.css';
 
@@ -10,6 +11,8 @@ function App() {
     const [error, setError] = useState(null);
     const [lastUpdated, setLastUpdated] = useState(null);
     const [refreshing, setRefreshing] = useState(false);
+    const [view, setView] = useState('dashboard'); // 'dashboard' or 'history'
+    const [selectedCurrency, setSelectedCurrency] = useState(null);
 
     const fetchRates = useCallback(async () => {
         try {
@@ -39,6 +42,16 @@ function App() {
         fetchRates();
     }, [fetchRates]);
 
+    const handleViewHistory = useCallback((currencyCode, currencyName) => {
+        setSelectedCurrency({ code: currencyCode, name: currencyName });
+        setView('history');
+    }, []);
+
+    const handleBackToDashboard = useCallback(() => {
+        setView('dashboard');
+        setSelectedCurrency(null);
+    }, []);
+
     useEffect(() => {
         fetchRates();
 
@@ -50,38 +63,53 @@ function App() {
 
     return (
         <div className="App">
-            <Header
-                onRefresh={handleRefresh}
-                lastUpdated={lastUpdated}
-                refreshing={refreshing}
-            />
+            {view === 'dashboard' && (
+                <>
+                    <Header
+                        onRefresh={handleRefresh}
+                        lastUpdated={lastUpdated}
+                        refreshing={refreshing}
+                    />
 
-            <main className="app-main">
-                <CurrencyGrid
-                    rates={rates}
-                    loading={loading}
-                    error={error}
-                />
-            </main>
+                    <main className="app-main">
+                        <CurrencyGrid
+                            rates={rates}
+                            loading={loading}
+                            error={error}
+                            onViewHistory={handleViewHistory}
+                        />
+                    </main>
 
-            <footer className="app-footer">
-                <div className="footer-content">
-                    <p>
-                        Data provided by Banco de México (Banxico) •
-                        Updated {rates.length > 0 && rates[0]?.date
-                            ? new Date(rates[0].date).toLocaleDateString('en-US', {
-                                year: 'numeric',
-                                month: 'long',
-                                day: 'numeric'
-                            })
-                            : 'regularly'
-                        }
-                    </p>
-                    <p className="footer-disclaimer">
-                        Exchange rates are for informational purposes only
-                    </p>
-                </div>
-            </footer>
+                    <footer className="app-footer">
+                        <div className="footer-content">
+                            <p>
+                                Data provided by Banco de México (Banxico) •
+                                Updated {rates.length > 0 && rates[0]?.date
+                                    ? new Date(rates[0].date).toLocaleDateString('en-US', {
+                                        year: 'numeric',
+                                        month: 'long',
+                                        day: 'numeric'
+                                    })
+                                    : 'regularly'
+                                }
+                            </p>
+                            <p className="footer-disclaimer">
+                                Exchange rates are for informational purposes only
+                            </p>
+                        </div>
+                    </footer>
+                </>
+            )}
+
+            {view === 'history' && selectedCurrency && (
+                <main className="app-main">
+                    <HistoricalChart
+                        currencyCode={selectedCurrency.code}
+                        currencyName={selectedCurrency.name}
+                        onBack={handleBackToDashboard}
+                    />
+                </main>
+            )}
         </div>
     );
 }
