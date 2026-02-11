@@ -1,0 +1,116 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: Lambda function for sync.  
+
+Parameters:
+  Namespace:
+    Description: A namespace to use for naming resources in this stack, such as load balancer listeners and rules. This helps to avoid naming conflicts if you have multiple services.
+    Type: String
+    Default: 'ce-dev'
+
+Resources:
+
+  LambdaSyncRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: !Sub '${Namespace}-lambda-role'
+      AssumeRolePolicyDocument:
+        Statement:
+          - Action:
+              - sts:AssumeRole
+            Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+        Version: "2012-10-17"
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AWSLambdaExecute
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaENIManagementAccess
+
+      Path: /
+
+  LambdaSyncFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Runtime: nodejs24.x
+      FunctionName: !Sub '${AWS::StackName}-SyncFunction'
+      Role: !GetAtt LambdaSyncRole.Arn
+      Handler: index.handler
+      Environment:
+        Variables:
+          API_URL: 
+            Fn::ImportValue: !Sub '${Namespace}:InternalUrl'
+      Code:
+        ZipFile: |
+          exports.handler = async function callApi(event) {
+          try {
+                console.log(event);
+                const response = await fetch(process.env.API_URL + '/api/database/'+ (event.action || "initialize") ,{
+                  method: 'POST'
+                });
+                if (!response.ok) {
+                  throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                console.log('API Response Data:', data);
+              } catch (error) {
+                console.error('Error fetching data:', error);
+              }
+            };
+      Description: Syncs exchange rates from the backend API. This function is triggered by a CloudWatch Events rule on a schedule, and it makes an HTTP request to the backend API to initiate the sync process.
+      TracingConfig:
+        Mode: Active
+      VpcConfig:
+        SecurityGroupIds:
+          - !ImportValue
+            Fn::Join:
+              - ':'
+              - - !Ref Namespace
+                - FargateContainerSecurityGroup
+        SubnetIds:
+          - !ImportValue
+            Fn::Join:
+              - ':'
+              - - !Ref Namespace
+                - PrivateSubnetOne
+          - !ImportValue
+            Fn::Join:
+              - ':'
+              - - !Ref Namespace
+                - PrivateSubnetTwo   
+
+
+
+# EventBridge rule to trigger the Lambda function on a schedule (e.g., every hour)
+
+  ScheduledRule: 
+    Type: AWS::Events::Rule
+    Properties: 
+      Description: "ScheduledSyncRule"
+      ScheduleExpression: "rate(60 minutes)"
+      State: "ENABLED"
+      Targets: 
+        - 
+          Arn: 
+            Fn::GetAtt: 
+              - "LambdaSyncFunction"
+              - "Arn"
+          Id: "TargetFunctionV1"
+          Input: '{"action": "sync"}'
+
+  PermissionForEventsToInvokeLambda: 
+    Type: AWS::Lambda::Permission
+    Properties: 
+      FunctionName: !Ref "LambdaSyncFunction"
+      Action: "lambda:InvokeFunction"
+      Principal: "events.amazonaws.com"
+      SourceArn: 
+        Fn::GetAtt: 
+          - "ScheduledRule"
+          - "Arn"
+
+Outputs:
+  LambdaSyncFunctionArn:  
+    Description: ARN of the Lambda function for syncing exchange rates
+    Value: !GetAtt LambdaSyncFunction.Arn
+    Export:
+      Name: !Sub '${Namespace}:LambdaSyncFunctionArn'

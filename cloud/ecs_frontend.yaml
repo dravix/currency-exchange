@@ -1,0 +1,195 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: Deploys the ECS service for the frontend of the Currency Exchange application, and connects it to the internal load balancer
+
+Parameters:
+  Namespace:
+    Description: Namespace for the application, used for resource naming and tagging.
+    Type: String
+    Default: ce-dev
+
+  ServiceName:
+    Description: A name for the service
+    Type: String
+    Default: Frontend
+
+  ImageUrl:
+    Description: The url of a docker image that contains the application process that will handle the traffic for this service
+    Type: String
+    Default: 869457277268.dkr.ecr.us-east-1.amazonaws.com/currency-exchange:frontend-v0.1.2
+
+  ContainerPort:
+    Description: What port number the application inside the docker container is binding to
+    Type: Number
+    Default: 80
+
+  ContainerCpu:
+    Description: How much CPU to give the container. 1024 is 1 CPU
+    Type: Number
+    Default: 256
+
+  ContainerMemory:
+    Description: How much memory in megabytes to give the container
+    Type: Number
+    Default: 512
+
+  Path:
+    Description: A path on the public load balancer that this service should be connected to. Use * to send all load balancer traffic to this service.
+    Type: String
+    Default: '*'
+
+  Priority:
+    Description: The priority for the routing rule added to the load balancer. This only applies if your have multiple services which have been assigned to different paths on the load balancer.
+    Type: Number
+    Default: 10
+
+  DesiredCount:
+    Description: How many copies of the service task to run
+    Type: Number
+    Default: 2
+
+  Role:
+    Description: (Optional) An IAM role to give the service's containers if the code within needs to access other AWS resources like S3 buckets, DynamoDB tables, etc
+    Type: String
+    Default: ""
+    # Default: 
+    #   Fn::ImportValue: !Sub '${Namespace}:ECSTaskExecutionRole'
+
+
+
+Conditions:
+  HasCustomRole: !Not
+    - !Equals
+      - !Ref Role
+      - ""
+
+Resources:
+
+  # The task definition. This is a simple metadata description of what
+  # container to run, and what resource requirements it has.
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Ref ServiceName
+      Cpu: !Ref ContainerCpu
+      Memory: !Ref ContainerMemory
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      ExecutionRoleArn: !ImportValue
+        Fn::Join:
+          - ':'
+          - - !Ref Namespace
+            - ECSTaskExecutionRole
+      TaskRoleArn: !If
+        - HasCustomRole
+        - !Ref Role
+        - !Ref AWS::NoValue
+      ContainerDefinitions:
+        - Name: !Ref ServiceName
+          Essential: true
+          Cpu: !Ref ContainerCpu
+          Memory: !Ref ContainerMemory
+          Image: !Ref ImageUrl
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Sub '/${Namespace}/${ServiceName}/logs'
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: 'ecs'
+              awslogs-create-group: "true"
+          Environment:
+            # Value: !Sub '${RDSStack}-DBEndpoint'
+            - Name: BACKEND_HOST
+              Value: 
+                Fn::ImportValue: !Sub '${Namespace}:ExternalVip'
+          PortMappings:
+            - ContainerPort: !Ref ContainerPort
+
+  # The service. The service is a resource which allows you to run multiple
+  # copies of a type of task, and gather up their logs and metrics, as well
+  # as monitor the number of running tasks and replace any that have crashed
+  Service:
+    Type: AWS::ECS::Service
+    DependsOn: LoadBalancerRule
+    Properties:
+      ServiceName: !Ref ServiceName
+      Cluster: !ImportValue
+        Fn::Join:
+          - ':'
+          - - !Ref Namespace
+            - ClusterName
+      LaunchType: FARGATE
+      DeploymentConfiguration:
+        MaximumPercent: 200
+        MinimumHealthyPercent: 75
+      DesiredCount: !Ref DesiredCount
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: ENABLED
+          SecurityGroups:
+            - !ImportValue
+              Fn::Join:
+                - ':'
+                - - !Ref Namespace
+                  - FargateContainerSecurityGroup
+          Subnets:
+            - !ImportValue
+              Fn::Join:
+                - ':'
+                - - !Ref Namespace
+                  - PrivateSubnetOne
+            - !ImportValue
+              Fn::Join:
+                - ':'
+                - - !Ref Namespace
+                  - PrivateSubnetTwo
+
+                  
+      TaskDefinition: !Ref TaskDefinition
+      LoadBalancers:
+        - ContainerName: !Ref ServiceName
+          ContainerPort: !Ref ContainerPort
+          TargetGroupArn: !Ref TargetGroup
+
+  # A target group. This is used for keeping track of all the tasks, and
+  # what IP addresses / port numbers they have. You can query it yourself,
+  # to use the addresses yourself, but most often this target group is just
+  # connected to an application load balancer, or network load balancer, so
+  # it can automatically distribute traffic across all the targets.
+  TargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckIntervalSeconds: 6
+      HealthCheckPath: /
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 2
+      TargetType: ip
+      Name: !Ref ServiceName
+      Port: !Ref ContainerPort
+      Protocol: HTTP
+      UnhealthyThresholdCount: 2
+      VpcId: !ImportValue
+        Fn::Join:
+          - ':'
+          - - !Ref Namespace
+            - VPCId
+
+  # Create a rule on the load balancer for routing traffic to the target group
+  LoadBalancerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      Actions:
+        - TargetGroupArn: !Ref TargetGroup
+          Type: forward
+      Conditions:
+        - Field: path-pattern
+          Values:
+            - !Ref Path
+      Priority: !Ref Priority    
+      ListenerArn: !ImportValue
+        Fn::Join:
+          - ':'
+          - - !Ref Namespace
+            - PublicListener

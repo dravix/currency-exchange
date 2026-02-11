@@ -1,0 +1,276 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Description: Deploys the ECS service for the backend of the Currency Exchange application, and connects it to the internal load balancer
+
+Parameters:
+  Namespace:
+    Description: Namespace for the application, used for resource naming and tagging.
+    Type: String
+    Default: ce-dev
+
+  ServiceName:
+    Description: A name for the service
+    Type: String
+    Default: Backend
+
+  ImageUrl:
+    Description: The url of a docker image that contains the application process that will handle the traffic for this service
+    Type: String
+    Default: 869457277268.dkr.ecr.us-east-1.amazonaws.com/currency-exchange:backend-v0.1.4
+
+  ContainerPort:
+    Description: Container port number that the application inside the docker container is binding to
+    Type: Number
+    Default: 3000
+
+  ContainerCpu:
+    Description: How much CPU to give the container. 1024 is 1 CPU
+    Type: Number
+    Default: 256
+
+  ContainerMemory:
+    Description: Container memory in megabytes
+    Type: Number
+    Default: 512
+
+  PublicPath:
+    Description: Regex pattern for the public load balancer path that this service should be connected to.
+    Type: String
+    Default: '/api/(currencies|health|rates).*'
+
+  PrivatePath:
+    Description: A path on the private load balancer that this service should be connected to. Use * to send all load balancer traffic to this service.
+    Type: String
+    Default: '/api.*'
+
+  Priority:
+    Description: The priority for the routing rule added to the load balancer, the backend API should have a higher priority to ensure it receives traffic before other services.
+    Type: Number
+    Default: 1
+
+  DesiredCount:
+    Description: How many copies of the service task to run
+    Type: Number
+    Default: 2
+
+  Role:
+    Description: (Optional) An IAM role to give the service's containers if the code within needs to access other AWS resources like S3 buckets, DynamoDB tables, etc
+    Type: String
+    Default: ""
+      # Fn::ImportValue: !Sub '${Namespace}:ECSTaskExecutionRole'
+
+  BanxicoApiToken:
+    Description: Banxico API Token for Currency Exchange application
+    Type: String
+    NoEcho: true
+
+Conditions:
+  HasCustomRole: !Not
+    - !Equals
+      - !Ref Role
+      - ""
+
+Resources:
+
+  BanxicoApiKeySecret:
+    Type: 'AWS::SecretsManager::Secret'
+    Properties:
+      Description: 'Banxico API Token for Currency Exchange application'
+      Name: 'BANXICO_API_TOKEN'
+      SecretString: !Ref BanxicoApiToken
+
+  # The task definition. This is a simple metadata description of what
+  # container to run, and what resource requirements it has.
+  TaskDefinition:
+    Type: AWS::ECS::TaskDefinition
+    Properties:
+      Family: !Ref ServiceName
+      Cpu: !Ref ContainerCpu
+      Memory: !Ref ContainerMemory
+      NetworkMode: awsvpc
+      RequiresCompatibilities:
+        - FARGATE
+      ExecutionRoleArn: !ImportValue
+        Fn::Join:
+          - ':'
+          - - !Ref Namespace
+            - ECSTaskExecutionRole
+      TaskRoleArn: !If
+        - HasCustomRole
+        - !Ref Role
+        - !Ref AWS::NoValue
+      ContainerDefinitions:
+        - Name: !Ref ServiceName
+          Essential: true
+          Cpu: !Ref ContainerCpu
+          Memory: !Ref ContainerMemory
+          Image: !Ref ImageUrl
+          LogConfiguration:
+            LogDriver: awslogs
+            Options:
+              awslogs-group: !Sub '/${Namespace}/${ServiceName}/logs'
+              awslogs-region: !Ref AWS::Region
+              awslogs-stream-prefix: 'ecs'
+              awslogs-create-group: "true"
+          HealthCheck:
+            Command: ["CMD-SHELL", "curl -f http://localhost:${PORT}/api/health || exit 1"]
+            Interval: 30
+            Timeout: 5
+            Retries: 3
+            StartPeriod: 60
+          Environment:
+            - Name: DB_HOST
+              Value: 
+                Fn::ImportValue: !Sub '${Namespace}:DBEndpoint'
+              # Value: !Sub '${RDSStack}-DBEndpoint'
+            - Name: DB_USER
+              Value: 
+                Fn::ImportValue: !Sub '${Namespace}:DBUsername'
+            - Name: DB_NAME
+              Value: 
+                Fn::ImportValue: !Sub '${Namespace}:DBName'
+            - Name: PORT
+              Value: '3000'
+            - Name: DB_PORT
+              Value: '3306'
+            - Name: BANXICO_API_URL
+              Value: 'https://www.banxico.org.mx/SieAPIRest/service/v1/series'
+          Secrets:
+            - Name: BANXICO_API_TOKEN
+              ValueFrom: !Ref BanxicoApiKeySecret
+            - Name: DB_PASSWORD
+              ValueFrom:
+                 Fn::ImportValue: !Sub '${Namespace}:DBCredential'
+
+          PortMappings:
+            - ContainerPort: !Ref ContainerPort
+
+  # The service. The service is a resource which allows you to run multiple
+  # copies of a type of task, and gather up their logs and metrics, as well
+  # as monitor the number of running tasks and replace any that have crashed
+  Service:
+    Type: AWS::ECS::Service
+    DependsOn: 
+      - PrivateLoadBalancerRule
+      - PublicLoadBalancerRule
+    Properties:
+      ServiceName: !Ref ServiceName
+      Cluster: !ImportValue
+        Fn::Join:
+          - ':'
+          - - !Ref Namespace
+            - ClusterName
+      LaunchType: FARGATE
+      DeploymentConfiguration:
+        MaximumPercent: 200
+        MinimumHealthyPercent: 75
+      DesiredCount: !Ref DesiredCount
+      NetworkConfiguration:
+        AwsvpcConfiguration:
+          AssignPublicIp: DISABLED
+          SecurityGroups:
+            - !ImportValue
+              Fn::Join:
+                - ':'
+                - - !Ref Namespace
+                  - FargateContainerSecurityGroup
+          Subnets:
+            - !ImportValue
+              Fn::Join:
+                - ':'
+                - - !Ref Namespace
+                  - PrivateSubnetOne
+            - !ImportValue
+              Fn::Join:
+                - ':'
+                - - !Ref Namespace
+                  - PrivateSubnetTwo
+
+                  
+      TaskDefinition: !Ref TaskDefinition
+      LoadBalancers:
+        - ContainerName: !Ref ServiceName
+          ContainerPort: !Ref ContainerPort
+          TargetGroupArn: !Ref PrivateTargetGroup
+        - ContainerName: !Ref ServiceName
+          ContainerPort: !Ref ContainerPort
+          TargetGroupArn: !Ref PublicTargetGroup
+
+  # A target group. This is used for keeping track of all the tasks, and
+  # what IP addresses / port numbers they have. You can query it yourself,
+  # to use the addresses yourself, but most often this target group is just
+  # connected to an application load balancer, or network load balancer, so
+  # it can automatically distribute traffic across all the targets.
+  PrivateTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckIntervalSeconds: 6
+      HealthCheckPath: /
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 2
+      TargetType: ip
+      Name: !Sub '${ServiceName}-Private'
+      Port: !Ref ContainerPort
+      Protocol: HTTP
+      UnhealthyThresholdCount: 2
+      VpcId: !ImportValue
+        Fn::Join:
+          - ':'
+          - - !Ref Namespace
+            - VPCId
+
+  PublicTargetGroup:
+    Type: AWS::ElasticLoadBalancingV2::TargetGroup
+    Properties:
+      HealthCheckIntervalSeconds: 6
+      HealthCheckPath: /
+      HealthCheckProtocol: HTTP
+      HealthCheckTimeoutSeconds: 5
+      HealthyThresholdCount: 2
+      TargetType: ip
+      Name: !Sub '${ServiceName}-Public'
+      Port: !Ref ContainerPort
+      Protocol: HTTP
+      UnhealthyThresholdCount: 2
+      VpcId: !ImportValue
+        Fn::Join:
+          - ':'
+          - - !Ref Namespace
+            - VPCId
+
+  # Create a rule on the load balancer for routing traffic to the target group
+  PrivateLoadBalancerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      Actions:
+        - TargetGroupArn: !Ref PrivateTargetGroup
+          Type: forward
+      Conditions:
+        - Field: path-pattern
+          RegexValues: 
+            - !Ref PrivatePath
+      Priority: !Ref Priority
+      ListenerArn: !ImportValue
+        Fn::Join:
+          - ':'
+          - - !Ref Namespace
+            - PrivateListener
+
+   # Create a rule on the load balancer for routing traffic to the target group
+  PublicLoadBalancerRule:
+    Type: AWS::ElasticLoadBalancingV2::ListenerRule
+    Properties:
+      Actions:
+        - TargetGroupArn: !Ref PublicTargetGroup
+          Type: forward
+      Priority: !Ref Priority
+      Conditions:
+        - Field: path-pattern
+          RegexValues:
+            - !Ref PublicPath
+      ListenerArn: !ImportValue
+        Fn::Join:
+          - ':'
+          - - !Ref Namespace
+            - PublicListener

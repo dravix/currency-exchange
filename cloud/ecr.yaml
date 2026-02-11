@@ -1,5 +1,12 @@
 AWSTemplateFormatVersion: 2010-09-09
 Description: AWS CloudFormation template for ECS setup of Currency Exchange application
+
+Parameters:
+  Namespace:
+    Description: A namespace to use for naming resources in this stack, such as load balancer listeners and rules. This helps to avoid naming conflicts if you have multiple services.
+    Type: String
+    Default: 'ce-dev'
+
 Resources:
   ECRRepository: 
     Type: AWS::ECR::Repository
@@ -58,13 +65,11 @@ Outputs:
     Description: URI of the ECR repository for the currency-exchange project 
     Value: !GetAtt ECRRepository.RepositoryUri
     Export:
-      Name: !Sub '${AWS::StackName}-ECRRepositoryUri' 
-
-  
+      Name: !Sub '${Namespace}:ECRRepositoryUri' 
 
 
   GitHubActionsECRRoleArn:
     Description: ARN of the IAM Role for GitHub Actions to push to ECR
     Value: !GetAtt GitHubActionsECRRole.Arn
     Export:
-      Name: !Sub '${AWS::StackName}-GitHubActionsECRRoleArn'
+      Name: !Sub '${Namespace}:GitHubActionsECRRoleArn'
