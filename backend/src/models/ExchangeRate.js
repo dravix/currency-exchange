@@ -10,7 +10,7 @@ class ExchangeRate {
           c.currency_name,
           c.currency_code
         FROM exchange_rates er
-        LEFT JOIN currencies c ON er.series_id = c.series_id
+        INNER JOIN currencies c ON er.series_id = c.series_id
       `;
             const params = [];
 
@@ -35,6 +35,7 @@ class ExchangeRate {
                 query += ' LIMIT ?';
                 params.push(parseInt(filters.limit));
             }
+            console.log('Executing query:', query, 'with params:', params);
             const [rows] = await pool.query(query, params);
             return rows;
         } catch (error) {
@@ -98,6 +99,7 @@ class ExchangeRate {
             await connection.beginTransaction();
 
             for (const data of dataArray) {
+                // console.log(`Upserting exchange rate - Code ${data.currency_code} Series: ${data.series_id}, Date: ${data.date}, Rate: ${data.exchange_rate}`);
                 const query = `
           INSERT INTO exchange_rates (series_id, currency_code, exchange_rate, date)
           VALUES (?, ?, ?, STR_TO_DATE(?, '%d/%m/%Y'))

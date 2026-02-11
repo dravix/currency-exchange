@@ -48,10 +48,11 @@ CREATE TABLE IF NOT EXISTS currencies (
 -- Insert default currencies (common exchange rates from Banxico)
 INSERT INTO currencies (currency_code, currency_name, series_id) VALUES
 ('USD', 'US Dollar', 'SF343410'),
-('EUR', 'Euro', 'SF346079'),
-('GBP', 'British Pound', 'SF346042'),
-('JPY', 'Japanese Yen', 'SF346053'),
-('CAD', 'Canadian Dollar', 'SF346025')
+('EUR', 'Euro', 'SF46410'),
+('GBP', 'British Pound', 'SF46407'),
+('JPY', 'Japanese Yen', 'SF46406'),
+('CNY', 'Chinese Yuan', 'SF290383'),
+('CAD', 'Canadian Dollar', 'SF46411')
 ON DUPLICATE KEY UPDATE 
     currency_name = VALUES(currency_name),
     series_id = VALUES(series_id);

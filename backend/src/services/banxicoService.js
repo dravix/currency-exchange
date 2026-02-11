@@ -28,6 +28,7 @@ class BanxicoService {
                 url += `/${startDate}/${today}`;
             }
 
+            console.log('Final Banxico API URL:', url);
             // Make API request
             const response = await axios.get(url, {
                 headers: {
@@ -90,10 +91,12 @@ class BanxicoService {
             if (serie.datos && serie.datos.length > 0) {
                 serie.datos.forEach((dato) => {
                     if (dato.dato && dato.dato !== 'N/E') {
+                        const currencyCode = this.extractCurrencyCode(seriesId);
+                        // console.log(`Parsed data point - Code ${currencyCode} Series: ${seriesId}, Date: ${dato.fecha}, Rate: ${dato.dato}`);
                         results.push({
                             series_id: seriesId,
                             currency_name: seriesTitle,
-                            currency_code: this.extractCurrencyCode(seriesId),
+                            currency_code: currencyCode,
                             exchange_rate: parseFloat(dato.dato),
                             date: dato.fecha,
                         });
@@ -113,11 +116,12 @@ class BanxicoService {
     extractCurrencyCode(seriesId) {
         // Map common Banxico series IDs to currency codes
         const seriesMap = {
-            SF43718: 'USD',
+            SF343410: 'USD',
             SF46410: 'EUR',
             SF46407: 'GBP',
             SF46406: 'JPY',
-            SF43728: 'CAD',
+            SF290383: 'CNY',
+            SF46411: 'CAD',
         };
 
         return seriesMap[seriesId] || 'UNKNOWN';
