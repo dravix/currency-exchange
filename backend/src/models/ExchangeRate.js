@@ -35,7 +35,6 @@ class ExchangeRate {
                 query += ' LIMIT ?';
                 params.push(parseInt(filters.limit));
             }
-            console.log('Executing query:', query, 'with params:', params);
             const [rows] = await pool.query(query, params);
             return rows;
         } catch (error) {
