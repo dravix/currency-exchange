@@ -95,7 +95,7 @@ jobs:
         with:
           name: currency-exchange-vpc-${{ github.event.inputs.environment }}
           template: cloud/ecs_cluster.yaml
-          parameter-overrides: |
+          parameter-overrides: >-
             Namespace=${{ github.event.inputs.environment }}
             VPCName=${{ github.event.inputs.environment }}-VPC
           capabilities: CAPABILITY_NAMED_IAM
@@ -105,7 +105,7 @@ jobs:
         with:
           name: currency-exchange-rds-${{ github.event.inputs.environment }}
           template: cloud/rds.yaml
-          parameter-overrides: |
+          parameter-overrides: >-
             Namespace=${{ github.event.inputs.environment }}
             DBName=CurrencyExchangeDB
             DBUser=ceadmin
@@ -125,7 +125,7 @@ jobs:
         with:
           name: currency-exchange-frontend-${{ github.event.inputs.environment }}
           template: cloud/ecs_frontend.yaml
-          parameter-overrides: |
+          parameter-overrides: >-
             Namespace=${{ github.event.inputs.environment }}
             ServiceName=CE-Frontend
             ImageUrl=${{ steps.login-ecr.outputs.registry }}/currency-exchange:frontend-latest
@@ -142,7 +142,7 @@ jobs:
         with:
           name: currency-exchange-backend-${{ github.event.inputs.environment }}
           template: cloud/ecs_backend.yaml
-          parameter-overrides: |
+          parameter-overrides: >-
             Namespace=${{ github.event.inputs.environment }}
             ServiceName=CE-Backend
             ImageUrl=${{ steps.login-ecr.outputs.registry }}/currency-exchange:backend-latest
@@ -164,7 +164,7 @@ jobs:
         with:
           name: currency-exchange-lambda-${{ github.event.inputs.environment }}
           template: cloud/lambda.yaml
-          parameter-overrides: |
+          parameter-overrides: >-
             Namespace=${{ github.event.inputs.environment }}
           capabilities: CAPABILITY_NAMED_IAM
 
@@ -173,7 +173,7 @@ jobs:
         with:
           name: currency-exchange-cloudwatch-${{ github.event.inputs.environment }}
           template: cloud/cloudwatch.yaml
-          parameter-overrides: |
+          parameter-overrides: >-
             Namespace=${{ github.event.inputs.environment }}
             Email=${{ secrets.ALARM_NOTIFICATION_EMAIL }}
           capabilities: CAPABILITY_NAMED_IAM 
