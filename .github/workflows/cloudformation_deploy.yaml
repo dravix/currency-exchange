@@ -128,7 +128,7 @@ jobs:
             ContainerCpu=256,
             ContainerMemory=512,
             Priority=10,
-            DesiredCount=2,
+            DesiredCount=2
           capabilities: CAPABILITY_NAMED_IAM
 
       - name: Deploy CNF Backend ECS Service Stack
