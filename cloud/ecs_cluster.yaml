@@ -529,10 +529,7 @@ Outputs:
     Description: The name of the ECS cluster
     Value: !Ref ECSCluster
     Export:
-      Name: !Join
-        - ':'
-        - - !Ref Namespace
-          - ClusterName
+      Name: !Sub '${Namespace}:ClusterName'
 
   InternalUrl:
     Description: The url of the internal load balancer
