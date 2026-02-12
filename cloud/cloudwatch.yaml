@@ -33,7 +33,7 @@ Resources:
 # ELB Alarms
 #########################
 
-  ExternalELBLatencyAlarmELBAvailabilityAlarm:
+  ELBAvailabilityAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
       AlarmDescription: "Public ELB availability is below 99.9%"
@@ -302,10 +302,10 @@ Resources:
   LambdaDurationAlarm:
     Type: AWS::CloudWatch::Alarm
     Properties:
-      AlarmDescription: "Lambda function duration exceeds 1000ms"
+      AlarmDescription: "Lambda function duration exceeds 60000ms"
       ComparisonOperator: GreaterThanThreshold
       EvaluationPeriods: 1
-      Threshold: 1000
+      Threshold: 60000
       AlarmActions:
         - Ref: AlarmNotificationTopic
       Metrics:
@@ -397,25 +397,25 @@ Resources:
           ReturnData: true  
 
 
-    RDSHighDatabaseConnectionsAlarm:
-      Type: AWS::CloudWatch::Alarm
-      Properties:
-        AlarmDescription: "WARNING RDS instance has more than 80 database connections"
-        ComparisonOperator: GreaterThanThreshold
-        EvaluationPeriods: 1
-        Threshold: 80
-        AlarmActions:
-          - Ref: AlarmNotificationTopic
-        Metrics:
-          - Id: databaseConnections
-            MetricStat:
-              Metric:
-                Namespace: AWS/RDS
-                MetricName: DatabaseConnections
-                Dimensions:
-                  - Name: DBInstanceIdentifier
-                    Value: 
-                      Fn::ImportValue: !Sub '${Namespace}:RDSInstanceIdentifier'
-              Period: 300
-              Stat: Average
-            ReturnData: true
+  RDSHighDatabaseConnectionsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: "WARNING RDS instance has more than 80 database connections"
+      ComparisonOperator: GreaterThanThreshold
+      EvaluationPeriods: 1
+      Threshold: 80
+      AlarmActions:
+        - Ref: AlarmNotificationTopic
+      Metrics:
+        - Id: databaseConnections
+          MetricStat:
+            Metric:
+              Namespace: AWS/RDS
+              MetricName: DatabaseConnections
+              Dimensions:
+                - Name: DBInstanceIdentifier
+                  Value: 
+                    Fn::ImportValue: !Sub '${Namespace}:RDSInstanceIdentifier'
+            Period: 300
+            Stat: Average
+          ReturnData: true
