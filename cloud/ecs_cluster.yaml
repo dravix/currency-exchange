@@ -278,7 +278,7 @@ Resources:
   ECSCluster:
     Type: AWS::ECS::Cluster
     Properties:
-      ClusterName: !Sub '${AWS::StackName}-ECS-Cluster'
+      ClusterName: !Sub '${Namespace}-ECS-Cluster'
 
   # A security group for the containers we will run in Fargate.
   # Three rules, allowing network traffic from a public facing load
