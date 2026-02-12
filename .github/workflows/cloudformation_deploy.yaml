@@ -111,7 +111,7 @@ jobs:
             DBUser=ceadmin,
             DBAllocatedStorage=5,
             DBInstanceClass=db.t3.small,
-            ECSSecurityGroup=${{ github.event.inputs.environment }}:FargateContainerSecurityGroup,
+            ECSSecurityGroup=${{ github.event.inputs.environment }}-FargateContainerSG,
             MultiAZ=false,
             EnableReadReplica=false
           capabilities: CAPABILITY_NAMED_IAM
