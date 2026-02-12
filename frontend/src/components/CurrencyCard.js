@@ -64,7 +64,7 @@ const CurrencyCard = ({ rate, onViewHistory }) => {
                 </div>
             </div>
 
-            <button 
+            <button
                 className="view-history-btn"
                 onClick={() => onViewHistory(rate.currency_code, rate.currency_name)}
                 title="View historical data"

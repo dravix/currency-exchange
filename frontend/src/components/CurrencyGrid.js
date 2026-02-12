@@ -35,9 +35,9 @@ const CurrencyGrid = ({ rates, loading, error, onViewHistory }) => {
     return (
         <div className="currency-grid">
             {rates.map((rate) => (
-                <CurrencyCard 
-                    key={rate.id} 
-                    rate={rate} 
+                <CurrencyCard
+                    key={rate.id}
+                    rate={rate}
                     onViewHistory={onViewHistory}
                 />
             ))}
