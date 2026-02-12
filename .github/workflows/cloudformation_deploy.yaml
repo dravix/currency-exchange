@@ -3,7 +3,7 @@ name: Deploy CloudFormation Stack
 on:
   workflow_dispatch:
     inputs:
-      enviropnment:
+      environment:
         description: 'Environment to deploy to'
         required: true
         type: choice
@@ -28,7 +28,17 @@ jobs:
     runs-on: ubuntu-latest
     environment: ${{ github.event.inputs.environment }}
     steps:
-
+    
+      - name: Dry-run 
+        run: |
+          echo "${{ secrets.AWS_ACCESS_KEY }}"
+          echo "aws cloudformation deploy \
+            --template-file myStack.yaml \
+            --stack-name MyStack \
+            --region ${{ github.event.inputs.region }} \
+            --account-id ${{ secrets.AWS_ACCOUNT_ID }} \
+            --no-execute-changeset"
+            
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v6.0.0
         with:
@@ -40,14 +50,7 @@ jobs:
         run: |
           aws sts get-caller-identity
 
-      - name: Dry-run 
-        run: |
-          echo "aws cloudformation deploy \
-            --template-file myStack.yaml \
-            --stack-name MyStack \
-            --region ${{ github.event.inputs.region }} \
-            --account-id ${{ secrets.AWS_ACCOUNT_ID }} \
-            --no-execute-changeset"
+
 
       # - name: Configure AWS credentials
       #   uses: aws-actions/configure-aws-credentials@main
