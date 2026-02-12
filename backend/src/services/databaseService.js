@@ -159,6 +159,12 @@ const resetDatabase = async () => {
 
 const syncFromAPI = async () => {
     try {
+        const status = await checkDatabaseStatus();
+        if (!status.initialized) {
+            console.log('Database not fully initialized. Missing tables:', status.requiredTables.missing);
+            console.log('Initializing database before syncing...');
+            await initializeDatabase();
+        }
         const result = await syncService.syncExchangeRates();
 
         return {
