@@ -52,7 +52,7 @@ Resources:
       - VPCStack
       # - ECRRepositoryStack
     Properties:
-      TemplateURL: ./ecs_service.yaml
+      TemplateURL: ./ecs_frontend.yaml
       Parameters:
         Namespace: !Ref Namespace
         ServiceName: CE-Frontend
@@ -73,7 +73,7 @@ Resources:
       # - ECRRepositoryStack
       - RDSStack
     Properties:
-      TemplateURL: ./ecs_service.yaml
+      TemplateURL: ./ecs_backend.yaml
       Parameters:
         Namespace: !Ref Namespace
         ServiceName: CE-Backend
@@ -97,7 +97,6 @@ Resources:
       TemplateURL: ./lambda_sync.yaml
       Parameters:
         Namespace: !Ref Namespace
-        APIUrl: !Sub '${VPCStack.Outputs.ExternalUrl}'
 
 
   CloudWatchStack:
