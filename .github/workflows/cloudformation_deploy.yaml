@@ -52,7 +52,16 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
+      - name: Check if backend image exists
+        id: check-be-image-exists
+        uses: tyriis/docker-image-tag-exists@v2.1.0
+        with:
+          registry: ${{ steps.login-ecr.outputs.registry }}
+          repository: currency-exchange
+          tag: backend-latest
+
       - name: Build Backend Docker image, tag and push it to Amazon ECR
+        if: ${{ steps.check-be-image-exists.outputs.image-exists != 'false' }}
         env:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           REPOSITORY: currency-exchange
@@ -62,7 +71,16 @@ jobs:
           docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
           docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
 
+      - name: Check if frontend image exists
+        id: check-fe-image-exists
+        uses: tyriis/docker-image-tag-exists@v2.1.0
+        with:
+          registry: ${{ steps.login-ecr.outputs.registry }}
+          repository: currency-exchange
+          tag: frontend-latest
+
       - name: Build Frontend Docker image, tag and push it to Amazon ECR
+        if: ${{ steps.check-fe-image-exists.outputs.image-exists != 'false' }}
         env:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           REPOSITORY: currency-exchange
