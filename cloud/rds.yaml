@@ -44,12 +44,12 @@ Parameters:
     Default: db.t3.small
     ConstraintDescription: must select a valid database instance type.
 
-  ECSSecurityGroup:
-    Description: The ECS security group of the ECS tasks that need access to the database
-    Type: String
-    Default: Default
-    AllowedPattern: '[a-zA-Z0-9\-]+'
-    ConstraintDescription: must be a valid security group name.
+  # ECSSecurityGroup:
+  #   Description: The ECS security group of the ECS tasks that need access to the database
+  #   Type: String
+  #   Default: Default
+  #   AllowedPattern: '[a-zA-Z0-9\-]+'
+  #   ConstraintDescription: must be a valid security group name.
 
   MultiAZ:
     Description: Multi-AZ master database
@@ -92,7 +92,8 @@ Resources:
       IpProtocol: tcp
       FromPort: "3306"
       ToPort: "3306"
-      SourceSecurityGroupId: !Ref ECSSecurityGroup
+      SourceSecurityGroupId: 
+        Fn::ImportValue: !Sub '${Namespace}:FargateContainerSecurityGroup'
 
   DBCredential:
     Type: AWS::SecretsManager::Secret
