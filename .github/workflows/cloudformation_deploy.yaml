@@ -142,13 +142,13 @@ jobs:
         run: sleep 300  
 
       - name: Deploy CNF Lambda Stack
-          uses: aws-actions/aws-cloudformation-github-deploy@v2.0.0
-          with:
-            name: currency-exchange-lambda-${{ github.event.inputs.environment }}
-            template: cloud/lambda.yaml
-            parameter-overrides: |
-              Namespace=${{ github.event.inputs.environment }}
-            capabilities: CAPABILITY_NAMED_IAM
+        uses: aws-actions/aws-cloudformation-github-deploy@v2.0.0
+        with:
+          name: currency-exchange-lambda-${{ github.event.inputs.environment }}
+          template: cloud/lambda.yaml
+          parameter-overrides: |
+            Namespace=${{ github.event.inputs.environment }}
+          capabilities: CAPABILITY_NAMED_IAM
 
       - name: Deploy CNF CloudWatch Alarms Stack
         uses: aws-actions/aws-cloudformation-github-deploy@v2.0.0
