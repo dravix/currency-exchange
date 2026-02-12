@@ -502,7 +502,6 @@ Resources:
           PolicyDocument:
             Statement:
               - Effect: Allow
-                Version: '2012-10-17'
                 Action:
 
                   # Allow the ECS Tasks to download images from ECR
@@ -676,3 +675,21 @@ Outputs:
         - ':'
         - - !Ref Namespace
           - PrivateLoadBalancerSG
+
+  PublicLoadBalancerFullName:
+    Description: The full name of the public load balancer, including the AWS assigned random characters at the end
+    Value: !GetAtt PublicLoadBalancer.LoadBalancerFullName
+    Export:
+      Name: !Join
+        - ':'
+        - - !Ref Namespace
+          - PublicLoadBalancerFullName
+
+  InternalLoadBalancerFullName:
+    Description: The full name of the internal load balancer, including the AWS assigned random characters at the end
+    Value: !GetAtt PrivateLoadBalancer.LoadBalancerFullName
+    Export:
+      Name: !Join
+        - ':'
+        - - !Ref Namespace
+          - InternalLoadBalancerFullName

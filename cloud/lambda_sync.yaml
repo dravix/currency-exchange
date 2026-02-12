@@ -114,3 +114,10 @@ Outputs:
     Value: !GetAtt LambdaSyncFunction.Arn
     Export:
       Name: !Sub '${Namespace}:LambdaSyncFunctionArn'
+
+
+  LambdaSyncFunctionName:  
+    Description: Name of the Lambda function for syncing exchange rates
+    Value: !Ref LambdaSyncFunction
+    Export:
+      Name: !Sub '${Namespace}:LambdaSyncFunctionName'

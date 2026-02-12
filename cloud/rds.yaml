@@ -204,3 +204,10 @@ Outputs:
         - /
         - !Ref DBName
     Condition: EnableReadReplica
+
+
+  InstanceIdentifier:
+    Description: The RDS instance identifier
+    Value: !Ref MainDB
+    Export:
+      Name: !Sub '${Namespace}:RDSInstanceIdentifier'

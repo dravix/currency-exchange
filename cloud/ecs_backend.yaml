@@ -16,7 +16,7 @@ Parameters:
   ImageUrl:
     Description: The url of a docker image that contains the application process that will handle the traffic for this service
     Type: String
-    Default: 869457277268.dkr.ecr.us-east-1.amazonaws.com/currency-exchange:backend-v0.1.4
+    Default: 869457277268.dkr.ecr.us-east-1.amazonaws.com/currency-exchange:backend-v1.0.0
 
   ContainerPort:
     Description: Container port number that the application inside the docker container is binding to
@@ -274,3 +274,10 @@ Resources:
           - ':'
           - - !Ref Namespace
             - PublicListener
+
+Outputs:
+    BackendServiceName:
+      Description: The name of the backend ECS service
+      Value: !Ref ServiceName
+      Export:
+        Name: !Sub '${Namespace}:BackendServiceName'

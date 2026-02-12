@@ -58,6 +58,15 @@ Resources:
                   - 'ecr:PutImage'
                   - 'ecr:BatchCheckLayerAvailability'
                 Resource: !Sub 'arn:aws:ecr:${AWS::Region}:${AWS::AccountId}:repository/currency-exchange'
+              - Effect: Allow
+                Action:
+                  -  "cloudformation:DescribeStacks"
+                  -  "cloudformation:CreateChangeSet"
+                  -  "cloudformation:DescribeChangeSet"
+                  -  "cloudformation:DeleteChangeSet"
+                  -  "cloudformation:ExecuteChangeSet"
+                  -  "cloudformation:DescribeEvents"
+                Resource: '*'
 
 Outputs:
 

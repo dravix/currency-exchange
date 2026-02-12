@@ -12,6 +12,12 @@ Parameters:
     Type: String
     Default: ce-dev
 
+  
+  EmailNotification:
+    Description: Email address to receive alarm notifications
+    Type: String
+    Default: '--EMAIL_ADDRESS--' # Replace with your email address
+
 Resources:
 
   VPCStack:
@@ -35,22 +41,23 @@ Resources:
         MultiAZ: "false"
         EnableReadReplica: "false"
 
-  ECRRepositoryStack:
-    Type: AWS::CloudFormation::Stack
-    Properties:
-      TemplateURL: ./ecr.yaml
+  # ECRRepositoryStack:
+  #   Type: AWS::CloudFormation::Stack
+  #   Properties:
+  #     TemplateURL: ./ecr.yaml
 
   ECSFrontendStack:
     Type: AWS::CloudFormation::Stack
     DependsOn: 
       - VPCStack
-      - ECRRepositoryStack
+      # - ECRRepositoryStack
     Properties:
       TemplateURL: ./ecs_service.yaml
       Parameters:
         Namespace: !Ref Namespace
         ServiceName: CE-Frontend
-        ImageUrl: !Sub '${ECRRepositoryStack.Outputs.ECRRepositoryUri}:frontend-v0.1.4'
+        ImageUrl: 
+          Fn::ImportValue: !Sub '${Namespace}:ECRRepositoryUri:frontend-latest'
         ContainerPort: 80
         ContainerCpu: '256'
         ContainerMemory: '512'
@@ -63,14 +70,15 @@ Resources:
     Type: AWS::CloudFormation::Stack
     DependsOn: 
       - VPCStack
-      - ECRRepositoryStack
+      # - ECRRepositoryStack
       - RDSStack
     Properties:
       TemplateURL: ./ecs_service.yaml
       Parameters:
         Namespace: !Ref Namespace
         ServiceName: CE-Backend
-        ImageUrl: !Sub '${ECRRepositoryStack.Outputs.ECRRepositoryUri}:backend-v0.1.0'
+        ImageUrl: 
+            Fn::ImportValue: !Sub '${Namespace}:ECRRepositoryUri:backend-latest'
         ContainerPort: 3000
         ContainerCpu: '256'
         ContainerMemory: '512'
@@ -91,10 +99,23 @@ Resources:
         Namespace: !Ref Namespace
         APIUrl: !Sub '${VPCStack.Outputs.ExternalUrl}'
 
-# Custom resource to trigger initial invocation of the Lambda function upon stack creation
-  InitInvoke:
-    Type: AWS::CloudFormation::CustomResource
-    DependsOn: LambdaSyncStack
-    Version: "1.0"
+
+  CloudWatchStack:
+    Type: AWS::CloudFormation::Stack
+    DependsOn: 
+      - ECSBackendStack
+      - ECSFrontendStack
+      - LambdaSyncStack
     Properties:
-      ServiceToken: !GetAtt LambdaSyncStack.Outputs.LambdaSyncFunctionArn
+      TemplateURL: ./cloudwatch.yaml
+      Parameters:
+        Namespace: !Ref Namespace
+        Email: !Ref EmailNotification
+
+# Custom resource to trigger initial invocation of the Lambda function upon stack creation
+  # InitInvoke:
+  #   Type: AWS::CloudFormation::CustomResource
+  #   DependsOn: LambdaSyncStack
+  #   Version: "1.0"
+  #   Properties:
+  #     ServiceToken: !GetAtt LambdaSyncStack.Outputs.LambdaSyncFunctionArn
