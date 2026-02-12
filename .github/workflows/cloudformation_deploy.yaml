@@ -115,10 +115,6 @@ jobs:
             EnableReadReplica=false
           capabilities: CAPABILITY_NAMED_IAM
 
-      - name: Wait for 5 minutes to allow RDS instance to be available before deploying ECS services
-        run: sleep 300  
-
-
       - name: Deploy CNF Frontend ECS Service Stack
         uses: aws-actions/aws-cloudformation-github-deploy@v2.0.0
         with:
@@ -131,7 +127,6 @@ jobs:
             ContainerPort=80,
             ContainerCpu=256,
             ContainerMemory=512,
-            Path=*,
             Priority=10,
             DesiredCount=2,
           capabilities: CAPABILITY_NAMED_IAM
@@ -148,15 +143,10 @@ jobs:
             ContainerPort=3000,
             ContainerCpu=256,
             ContainerMemory=512,
-            PublicPath=/api/(currencies|health|rates).*,
-            PrivatePath=/api.*,
             Priority=1,
             DesiredCount=2,
             BanxicoApiToken=${{ secrets.BANXICO_API_TOKEN }}
           capabilities: CAPABILITY_NAMED_IAM  
-
-      - name: Wait for 5 minutes to allow services to stabilize before deploying CloudWatch alarms
-        run: sleep 300  
 
       - name: Deploy CNF Lambda Stack
         uses: aws-actions/aws-cloudformation-github-deploy@v2.0.0
