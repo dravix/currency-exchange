@@ -61,7 +61,7 @@ jobs:
           tag: backend-latest
 
       - name: Build Backend Docker image, tag and push it to Amazon ECR
-        if: ${{ steps.check-be-image-exists.outputs.image-exists != 'false' }}
+        if: ${{ steps.check-be-image-exists.outputs.exists == 'false' }}
         env:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           REPOSITORY: currency-exchange
@@ -80,7 +80,7 @@ jobs:
           tag: frontend-latest
 
       - name: Build Frontend Docker image, tag and push it to Amazon ECR
-        if: ${{ steps.check-fe-image-exists.outputs.image-exists != 'false' }}
+        if: ${{ steps.check-fe-image-exists.outputs.exists == 'false' }}
         env:
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           REPOSITORY: currency-exchange
