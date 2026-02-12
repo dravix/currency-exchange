@@ -1,0 +1,62 @@
+name: Deploy CloudFormation Stack
+
+on:
+  workflow_dispatch:
+    inputs:
+      enviropnment:
+        description: 'Environment to deploy to'
+        required: true
+        type: choice
+        options:
+          - dev
+          - integration
+          - production
+
+      region:
+        description: 'AWS Region'
+        required: true
+        type: choice
+        default: us-east-1
+        options:
+          - us-east-1
+          - us-east-2
+          - us-west-1
+          - us-west-2
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    steps:
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v6.0.0
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ github.event.inputs.region }}
+
+      - name: get caller identity 1
+        run: |
+          aws sts get-caller-identity
+
+      - name: Dry-run 
+        run: |
+          echo "aws cloudformation deploy \
+            --template-file myStack.yaml \
+            --stack-name MyStack \
+            --region ${{ github.event.inputs.region }} \
+            --account-id ${{ secrets.AWS_ACCOUNT_ID }} \
+            --no-execute-changeset"
+
+      # - name: Configure AWS credentials
+      #   uses: aws-actions/configure-aws-credentials@main
+      #   with:
+      #     role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GitHubActionsCloudFormationRole 
+      #     aws-region: ${{ github.event.inputs.region }}
+
+      # - name: Deploy CloudFormation Stack
+      #   uses: aws-actions/aws-cloudformation-github-deploy@v2.0.0
+      #   with:
+      #     name: MyStack
+      #     template: myStack.yaml
