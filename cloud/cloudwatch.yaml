@@ -1,0 +1,421 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: CloudWatch alarm for ELB availability
+Parameters:
+
+  Namespace:
+    Description: Namespace for the application, used for resource naming and tagging
+    Type: String
+    Default: ce-dev
+
+  Email:
+    Description: Email address to receive alarm notifications
+    Type: String
+    Default: '--EMAIL_ADDRESS--' # Replace with your email address
+
+
+Resources:
+
+#########################
+# SNS Topic for Alarms
+#########################
+
+  AlarmNotificationTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      TopicName: !Sub '${Namespace}-AlarmNotifications'
+      DisplayName: Alarm Notifications for ${Namespace}
+      Subscription:
+        - Endpoint: !Ref Email
+          Protocol: email
+
+
+#########################
+# ELB Alarms
+#########################
+
+  ExternalELBLatencyAlarmELBAvailabilityAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: "Public ELB availability is below 99.9%"
+      ComparisonOperator: LessThanThreshold
+      EvaluationPeriods: 1
+      Threshold: 99.9
+      AlarmActions:
+        - Ref: AlarmNotificationTopic
+      Metrics:
+        - Id: requestCount
+          MetricStat:
+            Metric:
+              Namespace: AWS/ApplicationELB
+              MetricName: RequestCount
+              Dimensions:
+                - Name: LoadBalancer
+                  Value: 
+                    Fn::ImportValue: !Sub '${Namespace}:PublicLoadBalancerFullName'
+            Period: 300
+            Stat: Sum
+          ReturnData: false
+        - Id: errorCount
+          MetricStat:
+            Metric:
+              Namespace: AWS/ApplicationELB
+              MetricName: HTTPCode_ELB_5XX_Count
+              Dimensions:
+                - Name: LoadBalancer
+                  Value: 
+                    Fn::ImportValue: !Sub '${Namespace}:PublicLoadBalancerFullName'
+            Period: 300
+            Stat: Sum
+          ReturnData: false
+        - Id: availability
+          Label: ELBAvailability
+          Expression: "100 - (100 * errorCount / requestCount)"
+          ReturnData: true
+
+#########################
+# ECS Alarms
+#########################
+
+  # ECS Frontend Latency Alarm
+
+  ExteralELBLatencyAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: "External ELB latency exceeds 300ms"
+      ComparisonOperator: GreaterThanThreshold
+      EvaluationPeriods: 1
+      Threshold: 300
+      AlarmActions:
+        - Ref: AlarmNotificationTopic
+      Metrics:
+        - Id: latency
+          MetricStat:
+            Metric:
+              Namespace: AWS/ApplicationELB
+              MetricName: TargetResponseTime
+              Dimensions:
+                - Name: LoadBalancer
+                  Value: 
+                    Fn::ImportValue: !Sub '${Namespace}:PublicLoadBalancerFullName'
+            Period: 300
+            Stat: Average
+          ReturnData: true
+
+  # ECS Backend Latency Alarm
+  
+
+  InternalELBLatencyAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: "Internal ELB latency exceeds 2000ms"
+      ComparisonOperator: GreaterThanThreshold
+      EvaluationPeriods: 1
+      Threshold: 2000
+      AlarmActions:
+        - Ref: AlarmNotificationTopic
+      Metrics:
+        - Id: latency
+          MetricStat:
+            Metric:
+              Namespace: AWS/ApplicationELB
+              MetricName: TargetResponseTime
+              Dimensions:
+                - Name: LoadBalancer
+                  Value: 
+                    Fn::ImportValue: !Sub '${Namespace}:InternalLoadBalancerFullName'
+            Period: 300
+            Stat: Average
+          ReturnData: true
+
+  #ECS Memory Utilization Alarms
+
+  ECSBackendMemoryUtilizationAlarmWarning:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: "WARNING ECS Backend service memory utilization exceeds 80%"
+      ComparisonOperator: GreaterThanThreshold
+      EvaluationPeriods: 1
+      Threshold: 80
+      AlarmActions:
+        - Ref: AlarmNotificationTopic
+      Metrics:
+        - Id: memUtilization
+          MetricStat:
+            Metric:
+              Namespace: AWS/ECS
+              MetricName: MemoryUtilization
+              Dimensions:
+                - Name: ClusterName
+                  Value: 
+                    Fn::ImportValue: !Sub '${Namespace}:ClusterName'
+                - Name: ServiceName
+                  Value: 
+                    Fn::ImportValue: !Sub '${Namespace}:BackendServiceName'
+            Period: 300
+            Stat: Average
+          ReturnData: true
+
+  ECSFrontendMemoryUtilizationAlarmWarning:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: "WARNING ECS Frontend service memory utilization exceeds 80%"
+      ComparisonOperator: GreaterThanThreshold
+      EvaluationPeriods: 1
+      Threshold: 80
+      AlarmActions:
+        - Ref: AlarmNotificationTopic
+      Metrics:
+        - Id: memUtilization
+          MetricStat:
+            Metric:
+              Namespace: AWS/ECS
+              MetricName: MemoryUtilization
+              Dimensions:
+                - Name: ClusterName
+                  Value: 
+                    Fn::ImportValue: !Sub '${Namespace}:ClusterName'
+                - Name: ServiceName
+                  Value: 
+                    Fn::ImportValue: !Sub '${Namespace}:FrontendServiceName'
+            Period: 300
+            Stat: Average
+          ReturnData: true
+
+  ECSBackendMemoryUtilizationAlarmCritical:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: "CRITICAL ECS Backend service memory utilization exceeds 90%"
+      ComparisonOperator: GreaterThanThreshold
+      EvaluationPeriods: 1
+      Threshold: 90
+      AlarmActions:
+        - Ref: AlarmNotificationTopic
+      Metrics:
+        - Id: memUtilization
+          MetricStat:
+            Metric:
+              Namespace: AWS/ECS
+              MetricName: MemoryUtilization
+              Dimensions:
+                - Name: ClusterName
+                  Value: 
+                    Fn::ImportValue: !Sub '${Namespace}:ClusterName'
+                - Name: ServiceName
+                  Value: 
+                    Fn::ImportValue: !Sub '${Namespace}:BackendServiceName'
+            Period: 300
+            Stat: Average
+          ReturnData: true
+
+
+  ECSFrontendMemoryUtilizationAlarmCritical:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: "CRITICAL ECS Frontend service memory utilization exceeds 90%"
+      ComparisonOperator: GreaterThanThreshold
+      EvaluationPeriods: 1
+      Threshold: 90
+      AlarmActions:
+        - Ref: AlarmNotificationTopic
+      Metrics:
+        - Id: memUtilization
+          MetricStat:
+            Metric:
+              Namespace: AWS/ECS
+              MetricName: MemoryUtilization
+              Dimensions:
+                - Name: ClusterName
+                  Value: 
+                    Fn::ImportValue: !Sub '${Namespace}:ClusterName'
+                - Name: ServiceName
+                  Value: 
+                    Fn::ImportValue: !Sub '${Namespace}:FrontendServiceName'
+            Period: 300
+            Stat: Average
+          ReturnData: true          
+#########################
+# Lambda Alarms
+#########################
+
+  LambdaAvailabilityAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: "Lambda function availability is below 99.9%"
+      ComparisonOperator: LessThanThreshold
+      EvaluationPeriods: 2
+      Threshold: 99.9
+      AlarmActions:
+        - Ref: AlarmNotificationTopic
+      Metrics:
+        - Id: invocations
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Invocations
+              Dimensions:
+                - Name: FunctionName
+                  Value: 
+                    Fn::ImportValue: !Sub '${Namespace}:LambdaSyncFunctionName'
+            Period: 300
+            Stat: Sum
+          ReturnData: false
+        - Id: errors
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: 
+                    Fn::ImportValue: !Sub '${Namespace}:LambdaSyncFunctionName'
+            Period: 300
+            Stat: Sum
+          ReturnData: false
+        - Id: availability
+          Label: LambdaAvailability
+          Expression: "100 - (100 * errors / invocations)"
+          ReturnData: true
+
+  LambdaErrorsAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: "Lambda function has more than 1 error in 5 minutes"
+      ComparisonOperator: GreaterThanThreshold
+      EvaluationPeriods: 3
+      Threshold: 2
+      AlarmActions:
+        - Ref: AlarmNotificationTopic
+      Metrics:
+        - Id: errors
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Errors
+              Dimensions:
+                - Name: FunctionName
+                  Value: 
+                    Fn::ImportValue: !Sub '${Namespace}:LambdaSyncFunctionName'
+            Period: 360
+            Stat: Sum
+          ReturnData: true
+
+  LambdaDurationAlarm:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: "Lambda function duration exceeds 1000ms"
+      ComparisonOperator: GreaterThanThreshold
+      EvaluationPeriods: 1
+      Threshold: 1000
+      AlarmActions:
+        - Ref: AlarmNotificationTopic
+      Metrics:
+        - Id: duration
+          MetricStat:
+            Metric:
+              Namespace: AWS/Lambda
+              MetricName: Duration
+              Dimensions:
+                - Name: FunctionName
+                  Value: 
+                    Fn::ImportValue: !Sub '${Namespace}:LambdaSyncFunctionName'
+            Period: 300
+            Stat: Average
+          ReturnData: true  
+
+
+#########################
+# RDS Alarms
+#########################
+
+  RDSCPUUtilizationAlarmWarning:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: "WARNING RDS instance CPU utilization exceeds 80%"
+      ComparisonOperator: GreaterThanThreshold
+      EvaluationPeriods: 1
+      Threshold: 80
+      AlarmActions:
+        - Ref: AlarmNotificationTopic
+      Metrics:
+        - Id: cpuUtilization
+          MetricStat:
+            Metric:
+              Namespace: AWS/RDS
+              MetricName: CPUUtilization
+              Dimensions:
+                - Name: DBInstanceIdentifier
+                  Value: 
+                    Fn::ImportValue: !Sub '${Namespace}:RDSInstanceIdentifier'
+            Period: 300
+            Stat: Average
+          ReturnData: true
+
+  RDSCPUUtilizationAlarmCritical:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: "CRITICAL RDS instance CPU utilization exceeds 90%"
+      ComparisonOperator: GreaterThanThreshold
+      EvaluationPeriods: 1
+      Threshold: 90
+      AlarmActions:
+        - Ref: AlarmNotificationTopic
+      Metrics:
+        - Id: cpuUtilization
+          MetricStat:
+            Metric:
+              Namespace: AWS/RDS
+              MetricName: CPUUtilization
+              Dimensions:
+                - Name: DBInstanceIdentifier
+                  Value: 
+                    Fn::ImportValue: !Sub '${Namespace}:RDSInstanceIdentifier'
+            Period: 300
+            Stat: Average
+          ReturnData: true
+      
+  RDSFreeStorageSpaceAlarmWarning:
+    Type: AWS::CloudWatch::Alarm
+    Properties:
+      AlarmDescription: "WARNING RDS instance free storage space is below 20%"
+      ComparisonOperator: LessThanThreshold
+      EvaluationPeriods: 1
+      Threshold: 20
+      AlarmActions:
+        - Ref: AlarmNotificationTopic
+      Metrics:
+        - Id: freeStorageSpace
+          MetricStat:
+            Metric: 
+              Namespace: AWS/RDS
+              MetricName: FreeStorageSpace
+              Dimensions:
+                - Name: DBInstanceIdentifier
+                  Value: 
+                    Fn::ImportValue: !Sub '${Namespace}:RDSInstanceIdentifier'
+            Period: 300
+            Stat: Average
+          ReturnData: true  
+
+
+    RDSHighDatabaseConnectionsAlarm:
+      Type: AWS::CloudWatch::Alarm
+      Properties:
+        AlarmDescription: "WARNING RDS instance has more than 80 database connections"
+        ComparisonOperator: GreaterThanThreshold
+        EvaluationPeriods: 1
+        Threshold: 80
+        AlarmActions:
+          - Ref: AlarmNotificationTopic
+        Metrics:
+          - Id: databaseConnections
+            MetricStat:
+              Metric:
+                Namespace: AWS/RDS
+                MetricName: DatabaseConnections
+                Dimensions:
+                  - Name: DBInstanceIdentifier
+                    Value: 
+                      Fn::ImportValue: !Sub '${Namespace}:RDSInstanceIdentifier'
+              Period: 300
+              Stat: Average
+            ReturnData: true
