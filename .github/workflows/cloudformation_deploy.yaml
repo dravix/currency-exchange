@@ -29,16 +29,9 @@ jobs:
     environment: ${{ github.event.inputs.environment }}
     steps:
     
-      - name: Dry-run 
-        run: |
-          echo "${{ secrets.AWS_ACCESS_KEY }}"
-          echo "aws cloudformation deploy \
-            --template-file myStack.yaml \
-            --stack-name MyStack \
-            --region ${{ github.event.inputs.region }} \
-            --account-id ${{ secrets.AWS_ACCOUNT_ID }} \
-            --no-execute-changeset"
-            
+      - name: Checkout code
+        uses: actions/checkout@v3 
+
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v6.0.0
         with:
@@ -46,20 +39,123 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ github.event.inputs.region }}
 
-      - name: get caller identity 1
+      - name: Deploy CNF ECR Stack with github action role
+        uses: aws-actions/aws-cloudformation-github-deploy@v2.0.0
+        with:
+          name: currency-exchange-ecr-${{ github.event.inputs.environment }}
+          template: cloud/ecr.yaml
+          parameter-overrides: |
+            Namespace=${{ github.event.inputs.environment }}
+          capabilities: CAPABILITY_NAMED_IAM
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build Backend Docker image, tag and push it to Amazon ECR
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          REPOSITORY: currency-exchange
+          IMAGE_TAG: backend-latest
         run: |
-          aws sts get-caller-identity
+          cd backend/
+          docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
+          docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
+
+      - name: Build Frontend Docker image, tag and push it to Amazon ECR
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          REPOSITORY: currency-exchange
+          IMAGE_TAG: frontend-latest
+        run: |
+          cd frontend/
+          docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
+          docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
+
+      - name: Deploy CNF VPC, ELB and ECS Clusters Stack
+        uses: aws-actions/aws-cloudformation-github-deploy@v2.0.0
+        with:
+          name: currency-exchange-vpc-${{ github.event.inputs.environment }}
+          template: cloud/ecs_cluster.yaml
+          parameter-overrides: |
+            Namespace=${{ github.event.inputs.environment }}
+            VPCName=${{ github.event.inputs.environment }}-VPC
+          capabilities: CAPABILITY_NAMED_IAM
+      
+      - name: Deploy CNF RDS Stack
+        uses: aws-actions/aws-cloudformation-github-deploy@v2.0.0
+        with:
+          name: currency-exchange-rds-${{ github.event.inputs.environment }}
+          template: cloud/rds.yaml
+          parameter-overrides: |
+            Namespace=${{ github.event.inputs.environment }}
+            DBName=CurrencyExchangeDB
+            DBUser=ceadmin
+            DBAllocatedStorage=5
+            DBInstanceClass=db.t3.small 
+            ECSSecurityGroup=${{ github.event.inputs.environment }}:FargateContainerSecurityGroup
+            MultiAZ=false
+            EnableReadReplica=false
+          capabilities: CAPABILITY_NAMED_IAM
+
+      - name: Wait for 5 minutes to allow RDS instance to be available before deploying ECS services
+        run: sleep 300  
 
 
+      - name: Deploy CNF Frontend ECS Service Stack
+        uses: aws-actions/aws-cloudformation-github-deploy@v2.0.0
+        with:
+          name: currency-exchange-frontend-${{ github.event.inputs.environment }}
+          template: cloud/ecs_frontend.yaml
+          parameter-overrides: |
+            Namespace=${{ github.event.inputs.environment }}
+            ServiceName=CE-Frontend
+            ImageUrl=${{ steps.login-ecr.outputs.registry }}/currency-exchange:frontend-latest
+            ContainerPort=80
+            ContainerCpu=256
+            ContainerMemory=512
+            Path=*
+            Priority=10
+            DesiredCount=2
+          capabilities: CAPABILITY_NAMED_IAM
 
-      # - name: Configure AWS credentials
-      #   uses: aws-actions/configure-aws-credentials@main
-      #   with:
-      #     role-to-assume: arn:aws:iam::${{ secrets.AWS_ACCOUNT_ID }}:role/GitHubActionsCloudFormationRole 
-      #     aws-region: ${{ github.event.inputs.region }}
+      - name: Deploy CNF Backend ECS Service Stack
+        uses: aws-actions/aws-cloudformation-github-deploy@v2.0.0
+        with:
+          name: currency-exchange-backend-${{ github.event.inputs.environment }}
+          template: cloud/ecs_backend.yaml
+          parameter-overrides: |
+            Namespace=${{ github.event.inputs.environment }}
+            ServiceName=CE-Backend
+            ImageUrl=${{ steps.login-ecr.outputs.registry }}/currency-exchange:backend-latest
+            ContainerPort=3000
+            ContainerCpu=256
+            ContainerMemory=512
+            PublicPath=/api/(currencies|health|rates).*
+            PrivatePath=/api.*
+            Priority=1
+            DesiredCount=2
+            BanxicoApiToken=${{ secrets.BANXICO_API_TOKEN }}
+          capabilities: CAPABILITY_NAMED_IAM  
 
-      # - name: Deploy CloudFormation Stack
-      #   uses: aws-actions/aws-cloudformation-github-deploy@v2.0.0
-      #   with:
-      #     name: MyStack
-      #     template: myStack.yaml
+      - name: Wait for 5 minutes to allow services to stabilize before deploying CloudWatch alarms
+        run: sleep 300  
+
+      - name: Deploy CNF Lambda Stack
+          uses: aws-actions/aws-cloudformation-github-deploy@v2.0.0
+          with:
+            name: currency-exchange-lambda-${{ github.event.inputs.environment }}
+            template: cloud/lambda.yaml
+            parameter-overrides: |
+              Namespace=${{ github.event.inputs.environment }}
+            capabilities: CAPABILITY_NAMED_IAM
+
+      - name: Deploy CNF CloudWatch Alarms Stack
+        uses: aws-actions/aws-cloudformation-github-deploy@v2.0.0
+        with:
+          name: currency-exchange-cloudwatch-${{ github.event.inputs.environment }}
+          template: cloud/cloudwatch.yaml
+          parameter-overrides: |
+            Namespace=${{ github.event.inputs.environment }}
+            Email=${{ secrets.ALARM_NOTIFICATION_EMAIL }}
+          capabilities: CAPABILITY_NAMED_IAM 
