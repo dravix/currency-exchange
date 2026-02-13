@@ -32,7 +32,7 @@ Resources:
     Type: AWS::Lambda::Function
     Properties:
       Runtime: nodejs24.x
-      FunctionName: !Sub '${AWS::StackName}-SyncFunction'
+      FunctionName: !Sub '${Namespace}-SyncFunction'
       Role: !GetAtt LambdaSyncRole.Arn
       Handler: index.handler
       Environment:
