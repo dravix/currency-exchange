@@ -171,5 +171,5 @@ jobs:
           template: cloud/cloudwatch.yaml
           parameter-overrides: >-
             Namespace=${{ github.event.inputs.environment }},
-            Email=${{ secrets.ALARM_NOTIFICATION_EMAIL }}
+            Email=${{ vars.EMAIL_NOTIFICATION }}
           capabilities: CAPABILITY_NAMED_IAM 
