@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: CloudWatch alarm for ELB availability
+Description: CloudWatch Alarms for ELB availability, ECS service latency and memory utilization, Lambda function errors and duration, and RDS CPU utilization, free storage space, and database connections.
 Parameters:
 
   Namespace:

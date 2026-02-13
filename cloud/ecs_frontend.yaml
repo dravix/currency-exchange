@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: "2010-09-09"
 
-Description: Deploys the ECS service for the frontend of the Currency Exchange application, and connects it to the internal load balancer
+Description: Deploys the ECS service for the frontend of the Currency Exchange application, and connects it to the public load balancer
 
 Parameters:
   Namespace:

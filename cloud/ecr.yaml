@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: 2010-09-09
-Description: AWS CloudFormation template for ECS setup of Currency Exchange application
+Description: AWS CloudFormation template for ECR registry
 
 Parameters:
   Namespace:

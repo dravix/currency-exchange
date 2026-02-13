@@ -1,5 +1,5 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Description: Lambda function for sync.  
+Description: Lambda function for sync the exchange rates from Banxico.  
 
 Parameters:
   Namespace:
