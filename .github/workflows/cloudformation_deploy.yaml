@@ -162,6 +162,7 @@ jobs:
           aws lambda invoke \
             --function-name ${{ github.event.inputs.environment }}-SyncFunction \
             --region ${{ github.event.inputs.region }} \
+            --cli-binary-format raw-in-base64-out \
             --payload '{"action": "initialize"}' \
             response.json
           cat response.json
