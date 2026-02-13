@@ -158,11 +158,13 @@ jobs:
           capabilities: CAPABILITY_NAMED_IAM
 
       - name: Invoke Lambda Sync Function
-        uses: aws-actions/aws-lambda-deploy@v1
-        with:
-          function-name: ${{ github.event.inputs.environment }}-SyncFunction
-          aws-region: ${{ github.event.inputs.region }}
-          payload: '{"action": "initialize"}'
+        runs: |
+          aws lambda invoke \
+            --function-name ${{ github.event.inputs.environment }}-SyncFunction \
+            --region ${{ github.event.inputs.region }} \
+            --payload '{"action": "initialize"}' \
+            response.json
+          cat response.json
 
       - name: Deploy CNF CloudWatch Alarms Stack
         uses: aws-actions/aws-cloudformation-github-deploy@v2.0.0
