@@ -176,3 +176,6 @@ jobs:
             Namespace=${{ github.event.inputs.environment }},
             Email=${{ vars.EMAIL_NOTIFICATION }}
           capabilities: CAPABILITY_NAMED_IAM 
+
+      - name: Expose Application URL
+        run: aws cloudformation list-exports|yq '.Exports[]| select(.Name == "${{ github.event.inputs.environment }}:ExternalVip")|"http://" + .Value'
