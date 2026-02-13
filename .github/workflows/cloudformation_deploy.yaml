@@ -39,7 +39,7 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ github.event.inputs.region }}
 
-      - name: Deploy CNF ECR Stack with github action role
+      - name: Deploy CFN ECR Stack with github action role
         uses: aws-actions/aws-cloudformation-github-deploy@v2.0.0
         with:
           name: currency-exchange-ecr-${{ github.event.inputs.environment }}
@@ -90,7 +90,7 @@ jobs:
           docker build -t $REGISTRY/$REPOSITORY:$IMAGE_TAG .
           docker push $REGISTRY/$REPOSITORY:$IMAGE_TAG
 
-      - name: Deploy CNF VPC, ELB and ECS Clusters Stack
+      - name: Deploy CFN VPC, ELB and ECS Clusters Stack
         uses: aws-actions/aws-cloudformation-github-deploy@v2.0.0
         with:
           name: currency-exchange-vpc-${{ github.event.inputs.environment }}
@@ -100,7 +100,7 @@ jobs:
             VPCName=${{ github.event.inputs.environment }}-VPC
           capabilities: CAPABILITY_NAMED_IAM
       
-      - name: Deploy CNF RDS Stack
+      - name: Deploy CFN RDS Stack
         uses: aws-actions/aws-cloudformation-github-deploy@v2.0.0
         with:
           name: currency-exchange-rds-${{ github.event.inputs.environment }}
@@ -115,7 +115,7 @@ jobs:
             EnableReadReplica=false
           capabilities: CAPABILITY_NAMED_IAM
 
-      - name: Deploy CNF Frontend ECS Service Stack
+      - name: Deploy CFN Frontend ECS Service Stack
         uses: aws-actions/aws-cloudformation-github-deploy@v2.0.0
         with:
           name: currency-exchange-frontend-${{ github.event.inputs.environment }}
@@ -131,7 +131,7 @@ jobs:
             DesiredCount=2
           capabilities: CAPABILITY_NAMED_IAM
 
-      - name: Deploy CNF Backend ECS Service Stack
+      - name: Deploy CFN Backend ECS Service Stack
         uses: aws-actions/aws-cloudformation-github-deploy@v2.0.0
         with:
           name: currency-exchange-backend-${{ github.event.inputs.environment }}
@@ -148,7 +148,7 @@ jobs:
             BanxicoApiToken=${{ secrets.BANXICO_API_TOKEN }}
           capabilities: CAPABILITY_NAMED_IAM  
 
-      - name: Deploy CNF Lambda Stack
+      - name: Deploy CFN Lambda Stack
         uses: aws-actions/aws-cloudformation-github-deploy@v2.0.0
         with:
           name: currency-exchange-lambda-${{ github.event.inputs.environment }}
@@ -167,7 +167,7 @@ jobs:
             response.json
           cat response.json
 
-      - name: Deploy CNF CloudWatch Alarms Stack
+      - name: Deploy CFN CloudWatch Alarms Stack
         uses: aws-actions/aws-cloudformation-github-deploy@v2.0.0
         with:
           name: currency-exchange-cloudwatch-${{ github.event.inputs.environment }}
