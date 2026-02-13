@@ -158,7 +158,7 @@ jobs:
           capabilities: CAPABILITY_NAMED_IAM
 
       - name: Invoke Lambda Sync Function
-        runs: |
+        run: |
           aws lambda invoke \
             --function-name ${{ github.event.inputs.environment }}-SyncFunction \
             --region ${{ github.event.inputs.region }} \
