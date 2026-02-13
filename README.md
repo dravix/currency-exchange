@@ -37,11 +37,11 @@ In order to define SLI/SLO's we must understand what are the customer expectatio
 | ------------- | ------- | ------- |
 | **Frontend**
 | Availability  |  Success rate is defined as the count of HTTP status code other than 5xx over the total requests reported by the Load Balancer ```(count(HTTPCode_Target_2XX_Count) + count(HTTPCode_Target_3XX_Count) + count(HTTPCode_Target_4XX_Count) / RequestCount``` |  99.95% success rate |
-| Latency       |  Fast response time is defined as the 95th percentile of request latency reported by the Load Balancer below 2 seconds ```Percentile(0.95,TargetResponseTime) ``` |  95% of requests under 2000ms  |
+| Latency       |  Fast response time is defined as the 95th percentile of request latency reported by the Load Balancer below 2 seconds ```Percentile(0.95,TargetResponseTime) ``` |  95% of requests under 300ms  |
 | Error Rate    |  HTTP 5xx errors divided by total requests reported by the Load Balancer ```count(HTTPCode_Target_5XX_Count) / RequestCount``` |  Errors < 0.05% of total requests |
 | **Backend**
 | Availability  |  Success rate is defined as the count of HTTP status code other than 5xx over the total requests reported by the Load Balancer ```(count(HTTPCode_Target_2XX_Count) + count(HTTPCode_Target_3XX_Count) + count(HTTPCode_Target_4XX_Count) / RequestCount``` |  99.95% success rate |
-| Latency       |  Fast response time defined as the 95th percentile of request latency reported by the Load Balancer below 0.2 seconds ```Percentile(0.95,TargetResponseTime) ``` |  95% of requests under 200ms  |
+| Latency       |  Fast response time defined as the 95th percentile of request latency reported by the Load Balancer below 30 seconds ```Percentile(0.95,TargetResponseTime) ``` |  95% of requests under 30,000ms  |
 | Error Rate    |  HTTP 5xx errors divided by total requests reported by the Load Balancer ```count(HTTPCode_Target_5XX_Count) / RequestCount``` |  Errors < 0.05% of total requests |
 | **Lambdas**
 | Availability  |  Success rate defined as the proportion of invocations - error_invocations over total invocations ```count(invocations - error_invocations) / count(invocations)``` |  99.95% success rate |
@@ -158,10 +158,10 @@ Based on the SLO/SLI the following alerts are configured to notice when the moni
 | High CPU Utilization        |  Critical | ECS Cluster CPU Utilization (_CPUUtilization_)        | > 95% for 5 minutes                          | Email via SNS                |
 | High Memory Utilization        | Warning | ECS Task Memory Utilization (_MemoryUtilization_)     | > 80% for 5 minutes                          | Email via SNS                |
 | High Memory Utilization        | Critical | ECS Task Memory Utilization (_MemoryUtilization_)     | > 90% for 5 minutes                          | Email via SNS                |
-| **Increased Request Frontend Latency**     | Warning | External ELB Target Response Time (_TargetResponseTime_)       | > 2000ms for 5 minutes                        | Email via SNS                |
-| Increased Request Frontend Latency     | Critical | External ELB Target Response Time (_TargetResponseTime_)       | > 3000ms for 5 minutes                        | Email via SNS                |
-| **Increased Request Backend Latency**     | Warning | Internal ELB Target Response Time (_TargetResponseTime_)       | > 200ms for 5 minutes                        | Email via SNS                |
-| Increased Request Backend Latency     | Warning | Internal ELB Target Response Time (_TargetResponseTime_)       | > 300ms for 5 minutes                        | Email via SNS                |
+| **Increased Request Frontend Latency**     | Warning | External ELB Target Response Time (_TargetResponseTime_)       | > 200ms for 5 minutes                        | Email via SNS                |
+| Increased Request Frontend Latency     | Critical | External ELB Target Response Time (_TargetResponseTime_)       | > 300ms for 5 minutes                        | Email via SNS                |
+| **Increased Request Backend Latency**     | Warning | Internal ELB Target Response Time (_TargetResponseTime_)       | > 20,000ms for 5 minutes                        | Email via SNS                |
+| Increased Request Backend Latency     | Warning | Internal ELB Target Response Time (_TargetResponseTime_)       | > 30,000ms for 5 minutes                        | Email via SNS                |
 | **Elevated Extrenal Error Rates**   | Warning | External ELB 5XX Counts ( _HTTPCode_Target_5XX_Count_) | > 0.05% of total requests for 5 minutes | Email via SNS                |
 | Elevated Error Rates           | Critical | External ELB 5XX Counts ( _HTTPCode_Target_5XX_Count_) | > 0.1% of total requests for 5 minutes | Email via SNS                |
 | **Elevated Internal Error Rates**   | Warning | Internal ELB 5XX Counts ( _HTTPCode_Target_5XX_Count_) | > 0.05% of total requests for 5 minutes | Email via SNS                |
