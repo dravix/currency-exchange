@@ -1,0 +1,76 @@
+name: Deploy CloudFormation Stack
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        type: choice
+        options:
+          - dev
+          - integration
+          - production
+
+      region:
+        description: 'AWS Region'
+        required: true
+        type: choice
+        default: us-east-1
+        options:
+          - us-east-1
+          - us-east-2
+          - us-west-1
+          - us-west-2
+
+jobs:
+  destroy:
+    runs-on: ubuntu-latest
+    environment: ${{ github.event.inputs.environment }}
+    steps:
+    
+      - name: Checkout code
+        uses: actions/checkout@v3 
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v6.0.0
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ github.event.inputs.region }}
+
+      - name: Destroy CFN CloudWatch Alarms Stack
+        run: |
+          aws cloudformation delete-stack --stack-name currency-exchange-cloudwatch-${{ github.event.inputs.environment }}
+          aws cloudformation wait stack-delete-complete --stack-name currency-exchange-cloudwatch-${{ github.event.inputs.environment }}  
+    
+      - name: Destroy CFN Lambda Stack
+        run: |
+          aws cloudformation delete-stack --stack-name currency-exchange-lambda-${{ github.event.inputs.environment }}
+          aws cloudformation wait stack-delete-complete --stack-name currency-exchange-lambda-${{ github.event.inputs.environment }}
+    
+      - name: Destroy CFN Backend ECS Service Stack
+        run: |
+          aws cloudformation delete-stack --stack-name currency-exchange-backend-${{ github.event.inputs.environment }}
+          aws cloudformation wait stack-delete-complete --stack-name currency-exchange-backend-${{ github.event.inputs.environment }}
+    
+      - name: Destroy CFN Frontend ECS Service Stack
+        run: |
+          aws cloudformation delete-stack --stack-name currency-exchange-frontend-${{ github.event.inputs.environment }}
+          aws cloudformation wait stack-delete-complete --stack-name currency-exchange-frontend-${{ github.event.inputs.environment }}
+    
+      - name: Destroy CFN RDS Stack
+        run: |
+          aws cloudformation delete-stack --stack-name currency-exchange-rds-${{ github.event.inputs.environment }}
+          aws cloudformation wait stack-delete-complete --stack-name currency-exchange-rds-${{ github.event.inputs.environment }}
+    
+      - name: Destroy CFN VPC, ELB and ECS Clusters Stack
+        run: |  
+          aws cloudformation delete-stack --stack-name currency-exchange-vpc-${{ github.event.inputs.environment }}
+          aws cloudformation wait stack-delete-complete --stack-name currency-exchange-vpc-${{ github.event.inputs.environment }}
+
+      - name: Destroy CFN ECR Stack with github action role
+        run: |
+          aws cloudformation delete-stack --stack-name currency-exchange-ecr-${{ github.event.inputs.environment }}
+          aws cloudformation wait stack-delete-complete --stack-name currency-exchange-ecr-${{ github.event.inputs.environment }}
+

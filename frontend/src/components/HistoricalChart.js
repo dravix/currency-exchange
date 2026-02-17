@@ -202,7 +202,7 @@ const HistoricalChart = ({ currencyCode, currencyName, onBack }) => {
                         </div>
                     </div>
 
-                    <ResponsiveContainer width="100%" height={400}>
+                    <ResponsiveContainer width="100%" height={400} >
                         <LineChart
                             data={data}
                             margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
@@ -225,14 +225,18 @@ const HistoricalChart = ({ currencyCode, currencyName, onBack }) => {
                             <Line
                                 type="monotone"
                                 dataKey="rate"
-                                stroke="#667eea"
+                                stroke="#001ac4"
                                 strokeWidth={2}
-                                dot={{ fill: '#667eea', r: 3 }}
+                                dot={{ fill: '#66eaba', r: 3 }}
                                 activeDot={{ r: 6 }}
                                 name="Exchange Rate (MXN)"
                             />
                         </LineChart>
                     </ResponsiveContainer>
+                    <div className="chart-footer">
+                        <p style={{ fontWeight: 'bold' }}>Average rate [{data.length} days]: {(data.reduce((acc, d) => acc + d.rate, 0) / data.length).toFixed(6)} MXN</p>
+                        <p>Data source: Banxico API | Last updated: {data[data.length - 1]?.fullDate}</p>
+                    </div>
                 </div>
             )}
         </div>
