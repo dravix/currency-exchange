@@ -1,10 +1,10 @@
-name: Deploy CloudFormation Stack
+name: Destroy CloudFormation Stack
 
 on:
   workflow_dispatch:
     inputs:
       environment:
-        description: 'Environment to deploy to'
+        description: 'Environment to destroy'
         required: true
         type: choice
         options:
